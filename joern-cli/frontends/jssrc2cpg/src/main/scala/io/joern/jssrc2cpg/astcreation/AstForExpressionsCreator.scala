@@ -109,13 +109,24 @@ trait AstForExpressionsCreator {
     callNode
   }
 
+  protected def astForThisExpression(thisExpr: BabelNodeInfo): Ast = Ast(
+    createLiteralNode(thisExpr.code, Some(Defines.ANY.label), thisExpr.lineNumber, thisExpr.columnNumber)
+  )
+
   protected def astForMemberExpression(memberExpr: BabelNodeInfo): Ast = {
     val baseAst = astForNode(memberExpr.json("object"))
     Ast.storeInDiffGraph(baseAst, diffGraph)
+    val memberIsComputed = memberExpr.json("computed").bool
+    val memberNodeInfo   = createBabelNodeInfo(memberExpr.json("property"))
     val memberNode =
-      createFieldIdentifierNode(code(memberExpr.json("property")), memberExpr.lineNumber, memberExpr.columnNumber)
+      if (memberIsComputed) {
+        astForNode(memberNodeInfo.json)
+      } else {
+        Ast(createFieldIdentifierNode(memberNodeInfo.code, memberNodeInfo.lineNumber, memberNodeInfo.columnNumber))
+      }
+    Ast.storeInDiffGraph(memberNode, diffGraph)
     val accessAst =
-      createFieldAccess(baseAst.nodes.head, memberNode, memberExpr.lineNumber, memberExpr.columnNumber)
+      createFieldAccess(baseAst.nodes.head, memberNode.nodes.head, memberExpr.lineNumber, memberExpr.columnNumber)
     accessAst
   }
 
@@ -143,7 +154,15 @@ trait AstForExpressionsCreator {
     }
 
     val lhsAst = astForNode(assignment.json("left"))
-    val rhsAst = astForNode(assignment.json("right"))
+    val rhsAst = createBabelNodeInfo(assignment.json("right")) match {
+      case f @ BabelNodeInfo(BabelAst.FunctionDeclaration) =>
+        astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
+      case f @ BabelNodeInfo(BabelAst.FunctionExpression) =>
+        astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
+      case f @ BabelNodeInfo(BabelAst.ArrowFunctionExpression) =>
+        astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
+      case _ => astForNode(assignment.json("right"))
+    }
 
     val callNode =
       createCallNode(assignment.code, op, DispatchTypes.STATIC_DISPATCH, assignment.lineNumber, assignment.columnNumber)
@@ -190,7 +209,15 @@ trait AstForExpressionsCreator {
     }
 
     val lhsAst = astForNode(binExpr.json("left"))
-    val rhsAst = astForNode(binExpr.json("right"))
+    val rhsAst = createBabelNodeInfo(binExpr.json("right")) match {
+      case f @ BabelNodeInfo(BabelAst.FunctionDeclaration) =>
+        astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
+      case f @ BabelNodeInfo(BabelAst.FunctionExpression) =>
+        astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
+      case f @ BabelNodeInfo(BabelAst.ArrowFunctionExpression) =>
+        astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
+      case _ => astForNode(binExpr.json("right"))
+    }
 
     val callNode =
       createCallNode(binExpr.code, op, DispatchTypes.STATIC_DISPATCH, binExpr.lineNumber, binExpr.columnNumber)

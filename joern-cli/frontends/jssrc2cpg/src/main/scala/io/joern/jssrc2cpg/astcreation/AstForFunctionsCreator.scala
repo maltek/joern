@@ -11,6 +11,7 @@ import io.shiftleft.codepropertygraph.generated.ModifierTypes
 import io.shiftleft.codepropertygraph.generated.nodes.NewBlock
 import io.shiftleft.codepropertygraph.generated.nodes.NewMethod
 import io.shiftleft.codepropertygraph.generated.nodes.NewModifier
+import ujson.Arr
 
 trait AstForFunctionsCreator {
 
@@ -68,22 +69,57 @@ trait AstForFunctionsCreator {
     val paramNodes = withIndex(func.json("params").arr.toSeq) { (param, index) =>
       createBabelNodeInfo(param) match {
         case rest @ BabelNodeInfo(BabelAst.RestElement) =>
-          createParameterInNode(
-            rest.code.replace("...", ""),
-            rest.code,
-            index,
-            isVariadic = true,
-            rest.lineNumber,
-            rest.columnNumber
+          Seq(
+            Some(
+              createParameterInNode(
+                rest.code.replace("...", ""),
+                rest.code,
+                index,
+                isVariadic = true,
+                rest.lineNumber,
+                rest.columnNumber
+              )
+            )
           )
+        case arr @ BabelNodeInfo(BabelAst.ArrayPattern) =>
+          val arrParams = withIndex(arr.json("elements").arr.toSeq) {
+            case (arrParam, index) if !arrParam.isNull =>
+              val arrParamInfo = createBabelNodeInfo(arrParam)
+              Some(
+                createParameterInNode(
+                  arrParamInfo.code,
+                  arrParamInfo.code,
+                  index,
+                  isVariadic = false,
+                  arrParamInfo.lineNumber,
+                  arrParamInfo.columnNumber
+                )
+              )
+            case _ => None // skip null values
+          }
+          arrParams
         case other =>
-          createParameterInNode(other.code, other.code, index, isVariadic = false, other.lineNumber, other.columnNumber)
+          Seq(
+            Some(
+              createParameterInNode(
+                other.code,
+                other.code,
+                index,
+                isVariadic = false,
+                other.lineNumber,
+                other.columnNumber
+              )
+            )
+          )
       }
-    }
+    }.flatten
 
     localAstParentStack.push(blockNode)
 
-    val bodyStmtAsts = createBlockStatementAsts(block("body"))
+    val bodyStmtAsts = func match {
+      case BabelNodeInfo(BabelAst.ArrowFunctionExpression) => createBlockStatementAsts(Arr(block))
+      case _                                               => createBlockStatementAsts(block("body"))
+    }
     setArgumentIndices(bodyStmtAsts)
 
     val methodReturnNode = createMethodReturnNode(func)
@@ -102,7 +138,7 @@ trait AstForFunctionsCreator {
       )
 
     val mAst =
-      methodAst(methodNode, thisNode +: paramNodes.toList, Ast(blockNode).withChildren(bodyStmtAsts), methodReturnNode)
+      methodAst(methodNode, thisNode +: paramNodes.flatten, Ast(blockNode).withChildren(bodyStmtAsts), methodReturnNode)
         .withChild(Ast(virtualModifierNode))
 
     Ast.storeInDiffGraph(mAst, diffGraph)

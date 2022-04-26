@@ -32,46 +32,47 @@ trait AstForDeclarationsCreator {
     val init = Try(createBabelNodeInfo(declarator("init"))).toOption
 
     val typeFullName = init match {
+      case Some(f @ BabelNodeInfo(BabelAst.FunctionExpression)) =>
+        val (_, methodFullName) = calcMethodNameAndFullName(f)
+        methodFullName
       case Some(f @ BabelNodeInfo(BabelAst.FunctionDeclaration)) =>
+        val (_, methodFullName) = calcMethodNameAndFullName(f)
+        methodFullName
+      case Some(f @ BabelNodeInfo(BabelAst.ArrowFunctionExpression)) =>
         val (_, methodFullName) = calcMethodNameAndFullName(f)
         methodFullName
       case _ => Defines.ANY.label
     }
 
     val localNode = createLocalNode(id.code, typeFullName)
-    diffGraph.addEdge(localAstParentStack.head, localNode, EdgeTypes.AST)
     scope.addVariable(id.code, localNode, scopeType)
+    diffGraph.addEdge(localAstParentStack.head, localNode, EdgeTypes.AST)
 
-    init match {
-      case Some(f @ BabelNodeInfo(BabelAst.FunctionDeclaration)) =>
-        val destAst   = astForNode(id.json)
-        val sourceAst = astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
-        val assigmentCallAst =
-          createAssignment(
-            destAst.nodes.head,
-            sourceAst.nodes.head,
-            code(declarator),
-            line = line(declarator),
-            column = column(declarator)
-          )
-        Ast.storeInDiffGraph(destAst, diffGraph)
-        Ast.storeInDiffGraph(sourceAst, diffGraph)
-        assigmentCallAst
-      case Some(initExpr) =>
-        val destAst   = astForNode(id.json)
-        val sourceAst = astForNode(initExpr.json)
-        val assigmentCallAst =
-          createAssignment(
-            destAst.nodes.head,
-            sourceAst.nodes.head,
-            code(declarator),
-            line = line(declarator),
-            column = column(declarator)
-          )
-        Ast.storeInDiffGraph(destAst, diffGraph)
-        Ast.storeInDiffGraph(sourceAst, diffGraph)
-        assigmentCallAst
-      case None => Ast()
+    if (init.isEmpty) {
+      Ast()
+    } else {
+      val destAst = astForNode(id.json)
+      val sourceAst = init.get match {
+        case f @ BabelNodeInfo(BabelAst.FunctionDeclaration) =>
+          astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
+        case f @ BabelNodeInfo(BabelAst.FunctionExpression) =>
+          astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
+        case f @ BabelNodeInfo(BabelAst.ArrowFunctionExpression) =>
+          astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
+        case initExpr =>
+          astForNode(initExpr.json)
+      }
+      val assigmentCallAst =
+        createAssignment(
+          destAst.nodes.head,
+          sourceAst.nodes.head,
+          code(declarator),
+          line = line(declarator),
+          column = column(declarator)
+        )
+      Ast.storeInDiffGraph(destAst, diffGraph)
+      Ast.storeInDiffGraph(sourceAst, diffGraph)
+      assigmentCallAst
     }
   }
 

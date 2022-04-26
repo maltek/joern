@@ -432,19 +432,23 @@ class AstCreationPassTest extends AbstractPassTest {
 
     "have correct parameter order in lambda function with ignored param" in AstFixture("var x = ([, param]) => param") {
       cpg =>
-        // happened in: https://github.com/ShiftLeftSecurity/js2cpg/issues/232
-        // with the latest oracle js parser, anonymous function get an actual name
         def lambdaFullName = "code.js::program:anonymous"
         def lambda         = cpg.method.fullNameExact(lambdaFullName)
         lambda.checkNodeCount(1)
         def parameters = lambda.expandAst(NodeTypes.METHOD_PARAMETER_IN)
         parameters.checkNodeCount(2)
 
-        def param = parameters.filter(PropertyNames.ORDER, 1)
-        param.checkNodeCount(1)
-        param.checkProperty(PropertyNames.ORDER, 1)
-        param.checkProperty(PropertyNames.NAME, "param1_0")
-        param.checkProperty(PropertyNames.CODE, "{param}")
+        def param1 = parameters.filter(PropertyNames.INDEX, 0)
+        param1.checkNodeCount(1)
+        param1.checkProperty(PropertyNames.ORDER, 1)
+        param1.checkProperty(PropertyNames.NAME, "this")
+        param1.checkProperty(PropertyNames.CODE, "this")
+
+        def param2 = parameters.filter(PropertyNames.INDEX, 2)
+        param2.checkNodeCount(1)
+        param2.checkProperty(PropertyNames.ORDER, 2)
+        param2.checkProperty(PropertyNames.NAME, "param")
+        param2.checkProperty(PropertyNames.CODE, "param")
     }
 
     "have two lambda functions in same scope level with different full names" in AstFixture("""
