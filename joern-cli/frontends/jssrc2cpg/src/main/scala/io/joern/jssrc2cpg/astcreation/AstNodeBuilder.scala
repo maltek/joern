@@ -70,6 +70,17 @@ trait AstNodeBuilder {
       .columnNumber(column)
   }
 
+  protected def createControlStructureNode(node: BabelNodeInfo, controlStructureType: String): NewControlStructure = {
+    val line   = node.lineNumber
+    val column = node.columnNumber
+    val code   = node.code
+    NewControlStructure()
+      .controlStructureType(controlStructureType)
+      .code(code)
+      .lineNumber(line)
+      .columnNumber(column)
+  }
+
   protected def createParameterInNode(
     name: String,
     code: String,

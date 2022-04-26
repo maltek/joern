@@ -264,11 +264,8 @@ class AstCreationPassTest extends AbstractPassTest {
       def catchBlock = blocks.filter(PropertyNames.ORDER, 2)
       catchBlock.checkNodeCount(1)
 
-      def firstCatch = catchBlock.expandAst(NodeTypes.BLOCK)
-      firstCatch.checkNodeCount(1)
-
       def handle =
-        firstCatch.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "handle()")
+        catchBlock.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "handle()")
       handle.checkNodeCount(1)
 
       def finallyBlock = blocks.filter(PropertyNames.ORDER, 3)

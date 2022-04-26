@@ -4,6 +4,7 @@ import io.joern.x2cpg.datastructures.Stack._
 import io.joern.jssrc2cpg.parser.BabelAst
 import io.joern.jssrc2cpg.parser.BabelNodeInfo
 import io.joern.x2cpg.Ast
+import io.shiftleft.codepropertygraph.generated.ControlStructureTypes
 import ujson.Obj
 import ujson.Value
 
@@ -26,6 +27,7 @@ trait AstForStatementsCreator {
     scope.pushNewBlockScope(blockNode)
     localAstParentStack.push(blockNode)
     val blockStatementAsts = createBlockStatementAsts(block.json("body"))
+    setArgumentIndices(blockStatementAsts)
     localAstParentStack.pop()
     scope.popScope()
     Ast(blockNode).withChildren(blockStatementAsts)
@@ -39,6 +41,31 @@ trait AstForStatementsCreator {
         returnAst(retNode, List(argAst))
       }
       .getOrElse(Ast(retNode))
+  }
+
+  private def astForCatchClause(catchClause: BabelNodeInfo): Ast =
+    astForNode(catchClause.json("body"))
+
+  protected def astForTryStatement(tryStmt: BabelNodeInfo): Ast = {
+    val tryNode = createControlStructureNode(tryStmt, ControlStructureTypes.TRY)
+
+    val bodyAst = astForNode(tryStmt.json("block"))
+
+    val catchAst = safeObj(tryStmt.json, "handler")
+      .map { handler =>
+        astForCatchClause(createBabelNodeInfo(Obj(handler)))
+      }
+      .getOrElse(Ast())
+
+    val finalizerAst = safeObj(tryStmt.json, "finalizer")
+      .map { finalizer =>
+        astForNode(Obj(finalizer))
+      }
+      .getOrElse(Ast())
+
+    val tryChildren = List(bodyAst, catchAst, finalizerAst)
+    setArgumentIndices(tryChildren)
+    Ast(tryNode).withChildren(tryChildren)
   }
 
 }
