@@ -111,6 +111,7 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
   }
 
   protected def astForNode(json: Value): Ast = createBabelNodeInfo(json) match {
+    case ifStmt @ BabelNodeInfo(BabelAst.IfStatement)              => astForIfStatement(ifStmt)
     case classDecl @ BabelNodeInfo(BabelAst.ClassDeclaration)      => astForClass(classDecl)
     case classExpr @ BabelNodeInfo(BabelAst.ClassExpression)       => astForClass(classExpr)
     case func @ BabelNodeInfo(BabelAst.FunctionDeclaration)        => astForFunctionDeclaration(func)

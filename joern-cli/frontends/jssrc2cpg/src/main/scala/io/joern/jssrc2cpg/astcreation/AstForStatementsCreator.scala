@@ -68,6 +68,24 @@ trait AstForStatementsCreator {
     Ast(tryNode).withChildren(tryChildren)
   }
 
+  def astForIfStatement(ifStmt: BabelNodeInfo): Ast = {
+    val ifNode        = createControlStructureNode(ifStmt, ControlStructureTypes.IF)
+    val testAst       = astForNode(ifStmt.json("test"))
+    val consequentAst = astForNode(ifStmt.json("consequent"))
+    val alternateAst = safeObj(ifStmt.json, "alternate")
+      .map { alternate =>
+        astForNode(Obj(alternate))
+      }
+      .getOrElse(Ast())
+    val ifChildren = List(testAst, consequentAst, alternateAst)
+    setArgumentIndices(ifChildren)
+    Ast(ifNode)
+      .withChild(testAst)
+      .withConditionEdge(ifNode, testAst.nodes.head)
+      .withChild(consequentAst)
+      .withChild(alternateAst)
+  }
+
   protected def astForDoWhileStatement(doWhileStmt: BabelNodeInfo): Ast = {
     val whileNode = createControlStructureNode(doWhileStmt, ControlStructureTypes.DO)
     val testAst   = astForNode(doWhileStmt.json("test"))
