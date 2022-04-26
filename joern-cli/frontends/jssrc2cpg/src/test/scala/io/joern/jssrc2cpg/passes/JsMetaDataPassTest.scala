@@ -1,6 +1,7 @@
 package io.joern.jssrc2cpg.passes
 
 import io.shiftleft.codepropertygraph.Cpg
+import io.shiftleft.codepropertygraph.generated.Languages
 import io.shiftleft.semanticcpg.language._
 
 import scala.jdk.CollectionConverters._
@@ -20,7 +21,7 @@ class JsMetaDataPassTest extends AbstractPassTest {
     }
 
     "create a metadata node with correct language" in {
-      cpg.metaData.language.l shouldBe List("NEWJS")
+      cpg.metaData.language.l shouldBe List(Languages.JSSRC)
     }
 
     "create a metadata node with a hash" in {

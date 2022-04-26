@@ -52,6 +52,7 @@ class ImportCode[T <: Project](console: io.joern.console.Console[T]) {
   def python: Frontend     = new Frontend("python", Languages.PYTHON, "Python Source Frontend")
   def golang: Frontend     = new Frontend("golang", Languages.GOLANG, "Golang Source Frontend")
   def javascript: Frontend = new Frontend("javascript", Languages.JAVASCRIPT, "Javascript Source Frontend")
+  def jssrc: Frontend      = new Frontend("jssrc", Languages.JSSRC, "Source-based JS frontend based on Babel")
   def csharp: Frontend     = new Frontend("csharp", Languages.CSHARP, "C# Source Frontend (Roslyn)")
 
   def llvm: Frontend = new Frontend("llvm", Languages.LLVM, "LLVM Bitcode Frontend")
@@ -109,7 +110,7 @@ class ImportCode[T <: Project](console: io.joern.console.Console[T]) {
   }
 
   private def allFrontends: List[Frontend] =
-    List(c, cpp, ghidra, java, jvm, javascript, golang, llvm, oldc, python, csharp)
+    List(c, cpp, ghidra, java, jvm, javascript, jssrc, golang, llvm, oldc, python, csharp)
 
   /** Provide an overview of the available CPG generators (frontends)
     */
