@@ -200,13 +200,13 @@ trait AstCreatorHelper {
     val capturedLocals      = mutable.HashMap.empty[String, NewNode]
 
     resolvedReferenceIt.foreach { case ResolvedReference(variableNodeId, origin) =>
-      var currentScope             = origin.stack
-      var currentReferenceId       = origin.referenceNodeId
-      var nextReferenceId: NewNode = null
+      var currentScope           = origin.stack
+      var currentReference       = origin.referenceNode
+      var nextReference: NewNode = null
 
       var done = false
       while (!done) {
-        val localOrCapturedLocalIdOption =
+        val localOrCapturedLocalNodeOption =
           if (currentScope.get.nameToVariableNode.contains(origin.variableName)) {
             done = true
             Some(variableNodeId)
@@ -224,30 +224,30 @@ trait AstCreatorHelper {
                 capturedLocals
                   .updateWith(closureBindingIdProperty) {
                     case None =>
-                      val methodScopeNodeId = methodScope.scopeNode
-                      val localId =
+                      val methodScopeNode = methodScope.scopeNode
+                      val localNode =
                         createLocalNode(origin.variableName, Defines.ANY.label, Some(closureBindingIdProperty))
-                      diffGraph.addEdge(methodScopeNodeId, localId, EdgeTypes.AST)
-                      val closureBindingId = createClosureBindingNode(closureBindingIdProperty, origin.variableName)
+                      diffGraph.addEdge(methodScopeNode, localNode, EdgeTypes.AST)
+                      val closureBindingNode = createClosureBindingNode(closureBindingIdProperty, origin.variableName)
                       methodScope.capturingRefId.foreach(ref =>
-                        diffGraph.addEdge(ref, closureBindingId, EdgeTypes.CAPTURE)
+                        diffGraph.addEdge(ref, closureBindingNode, EdgeTypes.CAPTURE)
                       )
-                      nextReferenceId = closureBindingId
-                      Some(localId)
-                    case someLocalId =>
+                      nextReference = closureBindingNode
+                      Some(localNode)
+                    case someLocalNode =>
                       // When there is already a LOCAL representing the capturing, we do not
                       // need to process the surrounding scope element as this has already
                       // been processed.
                       done = true
-                      someLocalId
+                      someLocalNode
                   }
               case _: BlockScopeElement => None
             }
           }
 
-        localOrCapturedLocalIdOption.foreach { localOrCapturedLocalId =>
-          diffGraph.addEdge(currentReferenceId, localOrCapturedLocalId, EdgeTypes.REF)
-          currentReferenceId = nextReferenceId
+        localOrCapturedLocalNodeOption.foreach { localOrCapturedLocalNode =>
+          diffGraph.addEdge(currentReference, localOrCapturedLocalNode, EdgeTypes.REF)
+          currentReference = nextReference
         }
         currentScope = currentScope.get.surroundingScope
       }

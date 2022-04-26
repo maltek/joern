@@ -33,19 +33,19 @@ trait AstForTypesCreator {
       case _ =>
         val code = "constructor() {}"
         val fakeConstructorCode = """{
-                                    | "type": "ClassMethod",
-                                    | "key": {
-                                    |   "type": "Identifier",
-                                    |   "name": "constructor"
-                                    | },
-                                    | "kind": "constructor",
-                                    | "id": null,
-                                    | "params": [],
-                                    | "body": {
-                                    |   "type": "BlockStatement",
-                                    |   "body": []
-                                    | }
-                                    |}""".stripMargin
+          | "type": "ClassMethod",
+          | "key": {
+          |   "type": "Identifier",
+          |   "name": "constructor"
+          | },
+          | "kind": "constructor",
+          | "id": null,
+          | "params": [],
+          | "body": {
+          |   "type": "BlockStatement",
+          |   "body": []
+          | }
+          |}""".stripMargin
         val methodNode = createMethodAstAndNode(createBabelNodeInfo(ujson.read(fakeConstructorCode)))._2
         methodNode.code(code)
     }
@@ -62,11 +62,6 @@ trait AstForTypesCreator {
     val classTypeNode = createTypeNode(typeName, typeFullName)
     Ast.storeInDiffGraph(Ast(classTypeNode), diffGraph)
 
-    // We do not need to look at classNode.getClassHeritage because
-    // the CPG only allows us to encode inheriting from fully known
-    // types. Since in JS we "inherit" from a variable which would
-    // need to be resolved first, we for now dont handle the class
-    // hierarchy.
     val astParentType     = methodAstParentStack.head.label
     val astParentFullName = methodAstParentStack.head.properties("FULL_NAME").toString
 
@@ -105,8 +100,6 @@ trait AstForTypesCreator {
     dynamicInstanceTypeStack.push(typeFullName)
     metaTypeRefIdStack.push(metaTypeRefNode)
 
-    // In case there is no user-written constructor the JS parser creates
-    // an empty one automatically. Hence, the following is safe:
     val constructorNode = classConstructor(typeName, clazz)
 
     val constructorBindingNode = createBindingNode()
@@ -116,7 +109,7 @@ trait AstForTypesCreator {
     val classBodyElements = classMembers(clazz, withConstructor = false)
 
     classBodyElements.foreach { classElement =>
-      val memberId = createBabelNodeInfo(classElement) match {
+      val memberNode = createBabelNodeInfo(classElement) match {
         case m @ BabelNodeInfo(BabelAst.ClassMethod) =>
           val function                = createMethodAstAndNode(m)._2
           val fullName                = function.fullName.replace(s":${function.name}", s":$typeName:${function.name}")
@@ -130,9 +123,9 @@ trait AstForTypesCreator {
       }
 
       if (classElement("static").bool) {
-        diffGraph.addEdge(metaTypeDeclNode, memberId, EdgeTypes.AST)
+        diffGraph.addEdge(metaTypeDeclNode, memberNode, EdgeTypes.AST)
       } else {
-        diffGraph.addEdge(typeDeclNode, memberId, EdgeTypes.AST)
+        diffGraph.addEdge(typeDeclNode, memberNode, EdgeTypes.AST)
       }
     }
 

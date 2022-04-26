@@ -140,8 +140,8 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
     case regLiteral @ BabelNodeInfo(BabelAst.RegexLiteral)         => astForRegexLiteral(regLiteral)
     case bigIntLiteral @ BabelNodeInfo(BabelAst.BigIntLiteral)     => astForBigIntLiteral(bigIntLiteral)
     case other                                                     => notHandledYet(other)
-
   }
+
   protected def astForNodes(jsons: List[Value]): List[Ast] = jsons.map(astForNode)
 
   private def astsForFile(file: BabelNodeInfo): List[Ast] = astsForProgram(createBabelNodeInfo(file.json("program")))
