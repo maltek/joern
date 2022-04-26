@@ -145,19 +145,31 @@ trait AstNodeBuilder {
   }
 
   protected def createFieldAccess(
-    baseId: NewNode,
-    partId: NewNode,
+    baseNode: NewNode,
+    partNode: NewNode,
     line: Option[Integer] = None,
     column: Option[Integer] = None
   ): Ast = {
     val callNode = createCallNode(
-      codeOf(baseId) + "." + codeOf(partId),
+      codeOf(baseNode) + "." + codeOf(partNode),
       Operators.fieldAccess,
       DispatchTypes.STATIC_DISPATCH,
       line,
       column
     )
-    callAst(callNode, List(Ast(baseId), Ast(partId)))
+    callAst(callNode, List(Ast(baseNode), Ast(partNode)))
+  }
+
+  protected def createTernary(
+    testNode: NewNode,
+    trueNode: NewNode,
+    falseNode: NewNode,
+    line: Option[Integer] = None,
+    column: Option[Integer] = None
+  ): Ast = {
+    val code     = codeOf(testNode) + " ? " + codeOf(trueNode) + " : " + codeOf(falseNode)
+    val callNode = createCallNode(code, Operators.conditional, DispatchTypes.STATIC_DISPATCH, line, column)
+    callAst(callNode, List(Ast(testNode), Ast(trueNode), Ast(falseNode)))
   }
 
   protected def createCallNode(

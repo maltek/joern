@@ -340,10 +340,6 @@ class AstCreationPassTest extends AbstractPassTest {
         |""".stripMargin) { _ => }
 
     "have correct structure for conditional expression" in AstFixture("x ? y : z;") { cpg =>
-      def file = cpg.file
-      file.checkNodeCount(1)
-      file.checkProperty(PropertyNames.NAME, "code.js")
-
       def program = cpg.method.nameExact(":program")
       program.checkNodeCount(1)
 
@@ -357,9 +353,6 @@ class AstCreationPassTest extends AbstractPassTest {
       call.checkNodeCount(1)
       call.checkProperty(PropertyNames.CODE, "x ? y : z")
       call.checkProperty(PropertyNames.METHOD_FULL_NAME, Operators.conditional)
-
-      def namespace = file.expandAst(NodeTypes.NAMESPACE_BLOCK)
-      namespace.checkNodeCount(1)
 
       def identifiers = call.expandAst(NodeTypes.IDENTIFIER)
       identifiers.checkNodeCount(3)

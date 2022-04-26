@@ -129,6 +129,7 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
     case classDecl @ BabelNodeInfo(BabelAst.ClassDeclaration)      => astForClass(classDecl)
     case arrExpr @ BabelNodeInfo(BabelAst.ArrayExpression)         => astForArrayExpression(arrExpr)
     case tryStmt @ BabelNodeInfo(BabelAst.TryStatement)            => astForTryStatement(tryStmt)
+    case ternary @ BabelNodeInfo(BabelAst.ConditionalExpression)   => astForConditionalExpression(ternary)
     case other                                                     => notHandledYet(other)
 
   }

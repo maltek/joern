@@ -150,6 +150,16 @@ trait AstForExpressionsCreator {
     callAst(callNode, List(lhsAst, rhsAst))
   }
 
+  protected def astForConditionalExpression(ternary: BabelNodeInfo): Ast = {
+    val testAst       = astForNode(ternary.json("test"))
+    val consequentAst = astForNode(ternary.json("consequent"))
+    val alternateAst  = astForNode(ternary.json("alternate"))
+    Ast.storeInDiffGraph(testAst, diffGraph)
+    Ast.storeInDiffGraph(consequentAst, diffGraph)
+    Ast.storeInDiffGraph(alternateAst, diffGraph)
+    createTernary(testAst.nodes.head, consequentAst.nodes.head, alternateAst.nodes.head)
+  }
+
   protected def astForBinaryExpression(binExpr: BabelNodeInfo): Ast = {
     val op = binExpr.json("operator").str match {
       case "+"          => Operators.addition
