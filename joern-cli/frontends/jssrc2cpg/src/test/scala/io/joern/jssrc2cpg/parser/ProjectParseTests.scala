@@ -1,15 +1,13 @@
 package io.joern.jssrc2cpg.parser
 
 import better.files.File
+import io.joern.jssrc2cpg.testfixtures.JsSrc2CpgFrontend
 import io.shiftleft.codepropertygraph.generated.NodeTypes
 import io.shiftleft.codepropertygraph.generated.PropertyNames
 import io.shiftleft.codepropertygraph.Cpg
-import io.shiftleft.codepropertygraph.cpgloading.CpgLoader
-import io.shiftleft.codepropertygraph.cpgloading.CpgLoaderConfig
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import overflowdb.traversal.TraversalSource
-import overflowdb.Config
 
 class ProjectParseTests extends AnyWordSpec with Matchers {
   private def fileNames(cpg: Cpg): List[String] = {
@@ -29,17 +27,8 @@ class ProjectParseTests extends AnyWordSpec with Matchers {
   "Parsing a project" should {
 
     "generate correct filenames" in ProjectParseTestsFixture("rec") { tmpDir =>
-      val cpgPath = (tmpDir / "cpg.bin").path.toString
-      io.joern.jssrc2cpg.Main.main(Array(tmpDir.pathAsString, "--output", cpgPath))
-
-      val cpg =
-        CpgLoader
-          .loadFromOverflowDb(
-            CpgLoaderConfig.withDefaults
-              .withOverflowConfig(Config.withDefaults.withStorageLocation(cpgPath))
-          )
-
-      fileNames(cpg) shouldBe List(
+      val cpg = new JsSrc2CpgFrontend().execute(tmpDir.toJava)
+      fileNames(cpg) should contain allElementsOf List(
         "a.js",
         "b.js",
         s"sub${java.io.File.separator}c.js",
@@ -48,17 +37,9 @@ class ProjectParseTests extends AnyWordSpec with Matchers {
     }
 
     "recover from broken input file" in ProjectParseTestsFixture("broken") { tmpDir =>
-      val cpgPath = (tmpDir / "cpg.bin").path.toString
-      io.joern.jssrc2cpg.Main.main(Array(tmpDir.pathAsString, "--output", cpgPath))
-
-      val cpg =
-        CpgLoader
-          .loadFromOverflowDb(
-            CpgLoaderConfig.withDefaults
-              .withOverflowConfig(Config.withDefaults.withStorageLocation(cpgPath))
-          )
-
-      fileNames(cpg) shouldBe List("good.js")
+      val cpg = new JsSrc2CpgFrontend().execute(tmpDir.toJava)
+      fileNames(cpg) should not contain ("broken.js")
+      fileNames(cpg) should contain("good.js")
     }
 
   }
