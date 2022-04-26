@@ -92,6 +92,7 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
     val thisParam = createParameterInNode("this", "this", 0, isVariadic = false, lineNumber, columnNumber)
 
     val methodChildren = astsForFile(astNodeInfo)
+    setArgumentIndices(methodChildren)
 
     val methodReturn = NewMethodReturn()
       .code("RET")
@@ -122,6 +123,7 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
     case updateExpr @ BabelNodeInfo(BabelAst.UpdateExpression)     => astForUpdateExpression(updateExpr)
     case unaryExpr @ BabelNodeInfo(BabelAst.UnaryExpression)       => astForUnaryExpression(unaryExpr)
     case arrExpr @ BabelNodeInfo(BabelAst.ArrayExpression)         => astForArrayExpression(arrExpr)
+    case awaitExpr @ BabelNodeInfo(BabelAst.AwaitExpression)       => astForAwaitExpression(awaitExpr)
     case ternary @ BabelNodeInfo(BabelAst.ConditionalExpression)   => astForConditionalExpression(ternary)
     case exprStmt @ BabelNodeInfo(BabelAst.ExpressionStatement)    => astForExpressionStatement(exprStmt)
     case block @ BabelNodeInfo(BabelAst.BlockStatement)            => astForBlockStatement(block)

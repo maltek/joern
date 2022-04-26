@@ -4114,10 +4114,10 @@ class AstCreationPassTest extends AbstractPassTest {
   }
 
   "AST generation for await/async" should {
-    "have correct structure for await/async" in AstFixture("async function(foo) { await foo() }") { cpg =>
+    "have correct structure for await/async" in AstFixture("async function x(foo) { await foo() }") { cpg =>
       def awaitCall =
         cpg.method
-          .nameExact("anonymous")
+          .nameExact("x")
           .expandAst(NodeTypes.BLOCK)
           .expandAst(NodeTypes.CALL)
       awaitCall.checkNodeCount(1)

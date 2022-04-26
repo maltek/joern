@@ -240,9 +240,22 @@ trait AstForExpressionsCreator {
     scope.pushNewBlockScope(blockNode)
     localAstParentStack.push(blockNode)
     val sequenceExpressionAsts = createBlockStatementAsts(seq.json("expressions"))
+    setArgumentIndices(sequenceExpressionAsts)
     localAstParentStack.pop()
     scope.popScope()
     Ast(blockNode).withChildren(sequenceExpressionAsts)
+  }
+
+  protected def astForAwaitExpression(awaitExpr: BabelNodeInfo): Ast = {
+    val callNode = createCallNode(
+      awaitExpr.code,
+      "<operator>.await",
+      DispatchTypes.STATIC_DISPATCH,
+      awaitExpr.lineNumber,
+      awaitExpr.columnNumber
+    )
+    val argAst = astForNode(awaitExpr.json("argument"))
+    callAst(callNode, List(argAst))
   }
 
   protected def astForArrayExpression(arrExpr: BabelNodeInfo): Ast = {

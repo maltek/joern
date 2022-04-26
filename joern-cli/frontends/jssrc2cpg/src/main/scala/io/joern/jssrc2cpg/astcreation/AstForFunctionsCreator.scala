@@ -84,6 +84,7 @@ trait AstForFunctionsCreator {
     localAstParentStack.push(blockNode)
 
     val bodyStmtAsts = createBlockStatementAsts(block("body"))
+    setArgumentIndices(bodyStmtAsts)
 
     val methodReturnNode = createMethodReturnNode(func)
 
