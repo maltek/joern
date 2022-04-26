@@ -240,6 +240,10 @@ class NodeTypeStarters(cpg: Cpg) {
   def ret(code: String): Traversal[Return] =
     ret.code(code)
 
+  @Doc(info = "All static imports")
+  def staticImport: Traversal[Import] =
+    cpg.graph.nodes(NodeTypes.IMPORT).cast[Import]
+
   @Doc(info = "All switch blocks (`ControlStructure` nodes)")
   def switchBlock: Traversal[ControlStructure] =
     controlStructure.isSwitch
