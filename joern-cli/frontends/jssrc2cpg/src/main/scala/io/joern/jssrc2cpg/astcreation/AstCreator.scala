@@ -111,7 +111,6 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
   }
 
   protected def astForNode(json: Value): Ast = createBabelNodeInfo(json) match {
-    case ifStmt @ BabelNodeInfo(BabelAst.IfStatement)              => astForIfStatement(ifStmt)
     case classDecl @ BabelNodeInfo(BabelAst.ClassDeclaration)      => astForClass(classDecl)
     case classExpr @ BabelNodeInfo(BabelAst.ClassExpression)       => astForClass(classExpr)
     case func @ BabelNodeInfo(BabelAst.FunctionDeclaration)        => astForFunctionDeclaration(func)
@@ -127,9 +126,11 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
     case awaitExpr @ BabelNodeInfo(BabelAst.AwaitExpression)       => astForAwaitExpression(awaitExpr)
     case ternary @ BabelNodeInfo(BabelAst.ConditionalExpression)   => astForConditionalExpression(ternary)
     case exprStmt @ BabelNodeInfo(BabelAst.ExpressionStatement)    => astForExpressionStatement(exprStmt)
+    case ifStmt @ BabelNodeInfo(BabelAst.IfStatement)              => astForIfStatement(ifStmt)
     case block @ BabelNodeInfo(BabelAst.BlockStatement)            => astForBlockStatement(block)
     case ret @ BabelNodeInfo(BabelAst.ReturnStatement)             => astForReturnStatement(ret)
     case tryStmt @ BabelNodeInfo(BabelAst.TryStatement)            => astForTryStatement(tryStmt)
+    case forStmt @ BabelNodeInfo(BabelAst.ForStatement)            => astForForStatement(forStmt)
     case whileStmt @ BabelNodeInfo(BabelAst.WhileStatement)        => astForWhileStatement(whileStmt)
     case doWhileStmt @ BabelNodeInfo(BabelAst.DoWhileStatement)    => astForDoWhileStatement(doWhileStmt)
     case ident @ BabelNodeInfo(BabelAst.Identifier)                => astForIdentifier(ident)

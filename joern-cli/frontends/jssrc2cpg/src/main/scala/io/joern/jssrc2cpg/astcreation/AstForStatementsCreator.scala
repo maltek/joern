@@ -3,6 +3,7 @@ package io.joern.jssrc2cpg.astcreation
 import io.joern.x2cpg.datastructures.Stack._
 import io.joern.jssrc2cpg.parser.BabelAst
 import io.joern.jssrc2cpg.parser.BabelNodeInfo
+import io.joern.jssrc2cpg.passes.Defines
 import io.joern.x2cpg.Ast
 import io.shiftleft.codepropertygraph.generated.ControlStructureTypes
 import ujson.Obj
@@ -100,6 +101,30 @@ trait AstForStatementsCreator {
     val bodyAst   = astForNode(whileStmt.json("body"))
     setArgumentIndices(List(testAst, bodyAst))
     Ast(whileNode).withChild(testAst).withConditionEdge(whileNode, testAst.nodes.head).withChild(bodyAst)
+  }
+
+  protected def astForForStatement(forStmt: BabelNodeInfo): Ast = {
+    val forNode = createControlStructureNode(forStmt, ControlStructureTypes.FOR)
+    val initAst = safeObj(forStmt.json, "init")
+      .map { init =>
+        astForNode(Obj(init))
+      }
+      .getOrElse(Ast())
+    val testAst = safeObj(forStmt.json, "test")
+      .map { test =>
+        astForNode(Obj(test))
+      }
+      .getOrElse(
+        Ast(createLiteralNode("true", Some(Defines.BOOLEAN.label), forStmt.lineNumber, forStmt.columnNumber).order(2))
+      )
+    val updateAst = safeObj(forStmt.json, "update")
+      .map { update =>
+        astForNode(Obj(update))
+      }
+      .getOrElse(Ast())
+    val bodyAst = astForNode(forStmt.json("body"))
+    setArgumentIndices(List(initAst, testAst, updateAst, bodyAst))
+    Ast(forNode).withChild(initAst).withChild(testAst).withChild(updateAst).withChild(bodyAst)
   }
 
 }

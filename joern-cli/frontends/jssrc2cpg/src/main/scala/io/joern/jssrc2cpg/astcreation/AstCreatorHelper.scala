@@ -51,7 +51,7 @@ trait AstCreatorHelper {
   protected def registerType(typeName: String): Unit =
     global.usedTypes.putIfAbsent(typeName, true)
 
-  protected def nodeType(node: Value): BabelAst.BabelNode =
+  private def nodeType(node: Value): BabelAst.BabelNode =
     BabelAst.fromString(node("type").str)
 
   protected def generateUnusedVariableName(
@@ -83,7 +83,7 @@ trait AstCreatorHelper {
   private val MAX_CODE_LENGTH: Int = 1000
   private val MIN_CODE_LENGTH: Int = 50
 
-  protected def shortenCode(code: String, length: Int = MAX_CODE_LENGTH): String =
+  private def shortenCode(code: String, length: Int = MAX_CODE_LENGTH): String =
     StringUtils.abbreviate(code, math.max(MIN_CODE_LENGTH, length))
 
   protected def hasKey(node: Value, key: String): Boolean = Try(node(key)).isSuccess
@@ -108,7 +108,7 @@ trait AstCreatorHelper {
     safeObj(node, "loc").flatMap(loc => safeObj(loc, "start").flatMap(start => start("line").numOpt.map(_.toInt)))
   }
 
-  protected def computeScopePath(stack: Option[ScopeElement]): String =
+  private def computeScopePath(stack: Option[ScopeElement]): String =
     new ScopeElementIterator(stack)
       .to(Seq)
       .reverse

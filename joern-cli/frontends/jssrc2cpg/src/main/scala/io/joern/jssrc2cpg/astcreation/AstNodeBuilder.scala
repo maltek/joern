@@ -107,7 +107,7 @@ trait AstNodeBuilder {
     val line   = func.lineNumber
     val column = func.columnNumber
     NewMethodRef()
-      .code(shortenCode(code))
+      .code(code)
       .methodFullName(methodFullName)
       .typeFullName(methodFullName)
       .lineNumber(line)
