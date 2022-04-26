@@ -1584,6 +1584,7 @@ class AstCreationPassTest extends AbstractPassTest {
       def rightC = assignment.expandAst(NodeTypes.CALL)
       rightC.checkNodeCount(1)
       rightC.checkProperty(PropertyNames.METHOD_FULL_NAME, Operators.fieldAccess)
+
       def identifierC = rightC.expandAst(NodeTypes.FIELD_IDENTIFIER)
       identifierC.checkNodeCount(1)
       identifierC.checkProperty(PropertyNames.CANONICAL_NAME, "c")
@@ -1591,6 +1592,7 @@ class AstCreationPassTest extends AbstractPassTest {
       def rightB = rightC.expandAst(NodeTypes.CALL)
       rightB.checkNodeCount(1)
       rightB.checkProperty(PropertyNames.METHOD_FULL_NAME, Operators.fieldAccess)
+
       def identifierB = rightB.expandAst(NodeTypes.FIELD_IDENTIFIER)
       identifierB.checkNodeCount(1)
       identifierB.checkProperty(PropertyNames.CANONICAL_NAME, "b")
@@ -1598,10 +1600,12 @@ class AstCreationPassTest extends AbstractPassTest {
       def rightA = rightB.expandAst(NodeTypes.CALL)
       rightA.checkNodeCount(1)
       rightA.checkProperty(PropertyNames.METHOD_FULL_NAME, Operators.fieldAccess)
+
       def identifierX =
         rightA.expandAst(NodeTypes.IDENTIFIER).filter(PropertyNames.ARGUMENT_INDEX, 1)
       identifierX.checkNodeCount(1)
       identifierX.checkProperty(PropertyNames.NAME, "x")
+
       def identifierA =
         rightA.expandAst(NodeTypes.FIELD_IDENTIFIER).filter(PropertyNames.ARGUMENT_INDEX, 2)
       identifierA.checkNodeCount(1)
@@ -1630,9 +1634,11 @@ class AstCreationPassTest extends AbstractPassTest {
       def right = assignment.expandAst(NodeTypes.CALL)
       right.checkNodeCount(1)
       right.checkProperty(PropertyNames.NAME, "")
+
       def callToC = right.expandAst(NodeTypes.CALL)
       callToC.checkNodeCount(1)
       callToC.checkProperty(PropertyNames.METHOD_FULL_NAME, Operators.fieldAccess)
+
       def identifierC =
         callToC.expandAst(NodeTypes.FIELD_IDENTIFIER)
       identifierC.checkNodeCount(1)
@@ -1663,6 +1669,7 @@ class AstCreationPassTest extends AbstractPassTest {
         callToA.expandAst(NodeTypes.IDENTIFIER).filter(PropertyNames.ARGUMENT_INDEX, 1)
       identifierX.checkNodeCount(1)
       identifierX.checkProperty(PropertyNames.NAME, "x")
+
       def identifierA =
         callToA.expandAst(NodeTypes.FIELD_IDENTIFIER).filter(PropertyNames.ARGUMENT_INDEX, 2)
       identifierA.checkNodeCount(1)
@@ -1693,6 +1700,7 @@ class AstCreationPassTest extends AbstractPassTest {
         rightHandSide.expandAst(NodeTypes.IDENTIFIER).filter(PropertyNames.ARGUMENT_INDEX, 1)
       identifierX.checkNodeCount(1)
       identifierX.checkProperty(PropertyNames.NAME, "x")
+
       def identifierA =
         rightHandSide.expandAst(NodeTypes.FIELD_IDENTIFIER).filter(PropertyNames.ARGUMENT_INDEX, 2)
       identifierA.checkNodeCount(1)
@@ -1718,6 +1726,7 @@ class AstCreationPassTest extends AbstractPassTest {
         statement.expandAst(NodeTypes.IDENTIFIER).filter(PropertyNames.ARGUMENT_INDEX, 1)
       identifierX.checkNodeCount(1)
       identifierX.checkProperty(PropertyNames.NAME, "x")
+
       def identifierA =
         statement.expandAst(NodeTypes.FIELD_IDENTIFIER).filter(PropertyNames.ARGUMENT_INDEX, 2)
       identifierA.checkNodeCount(1)

@@ -68,4 +68,20 @@ trait AstForStatementsCreator {
     Ast(tryNode).withChildren(tryChildren)
   }
 
+  protected def astForDoWhileStatement(doWhileStmt: BabelNodeInfo): Ast = {
+    val whileNode = createControlStructureNode(doWhileStmt, ControlStructureTypes.DO)
+    val testAst   = astForNode(doWhileStmt.json("test"))
+    val bodyAst   = astForNode(doWhileStmt.json("body"))
+    setArgumentIndices(List(bodyAst, testAst))
+    Ast(whileNode).withChild(bodyAst).withChild(testAst).withConditionEdge(whileNode, testAst.nodes.head)
+  }
+
+  protected def astForWhileStatement(whileStmt: BabelNodeInfo): Ast = {
+    val whileNode = createControlStructureNode(whileStmt, ControlStructureTypes.WHILE)
+    val testAst   = astForNode(whileStmt.json("test"))
+    val bodyAst   = astForNode(whileStmt.json("body"))
+    setArgumentIndices(List(testAst, bodyAst))
+    Ast(whileNode).withChild(testAst).withConditionEdge(whileNode, testAst.nodes.head).withChild(bodyAst)
+  }
+
 }
