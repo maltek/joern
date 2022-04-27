@@ -3,6 +3,7 @@ package io.joern.jssrc2cpg.astcreation
 import io.joern.jssrc2cpg.parser.BabelNodeInfo
 import io.joern.jssrc2cpg.passes.Defines
 import io.joern.x2cpg.Ast
+import io.shiftleft.codepropertygraph.generated.DispatchTypes
 
 trait AstForPrimitivesCreator {
 
@@ -25,6 +26,16 @@ trait AstForPrimitivesCreator {
         Some(Defines.STRING.label),
         stringLiteral.lineNumber,
         stringLiteral.columnNumber
+      )
+    )
+
+  protected def astForTemplateElement(templateElement: BabelNodeInfo): Ast =
+    Ast(
+      createLiteralNode(
+        s"\"${templateElement.json("value")("cooked").str}\"",
+        Some(Defines.STRING.label),
+        templateElement.lineNumber,
+        templateElement.columnNumber
       )
     )
 
@@ -98,4 +109,28 @@ trait AstForPrimitivesCreator {
       )
     )
 
+  protected def astForTemplateLiteral(templateLiteral: BabelNodeInfo): Ast = {
+    val expressions = templateLiteral.json("expressions").arr.toList
+    val quasis      = templateLiteral.json("quasis").arr.toList.filterNot(_("tail").bool)
+    val quasisTail  = templateLiteral.json("quasis").arr.toList.filter(_("tail").bool).head
+
+    val callName = "__Runtime.TO_STRING"
+    val argsCodes = expressions.zip(quasis).flatMap { case (expression, quasi) =>
+      List(s"\"${quasi("value")("cooked").str}\"", code(expression))
+    }
+    val callCode = s"$callName${(argsCodes :+ s"\"${quasisTail("value")("cooked").str}\"").mkString("(", ", ", ")")}"
+    val templateCall =
+      createCallNode(
+        callCode,
+        callName,
+        DispatchTypes.STATIC_DISPATCH,
+        templateLiteral.lineNumber,
+        templateLiteral.columnNumber
+      )
+
+    val argumentAsts = expressions.zip(quasis).flatMap { case (expression, quasi) =>
+      List(astForNode(quasi), astForNode(expression))
+    }
+    callAst(templateCall, argumentAsts :+ astForNode(quasisTail))
+  }
 }

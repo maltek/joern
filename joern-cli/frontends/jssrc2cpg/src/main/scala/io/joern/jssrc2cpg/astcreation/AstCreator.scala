@@ -151,6 +151,8 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
     case regExpLiteral @ BabelNodeInfo(BabelAst.RegExpLiteral)       => astForRegExpLiteral(regExpLiteral)
     case regLiteral @ BabelNodeInfo(BabelAst.RegexLiteral)           => astForRegexLiteral(regLiteral)
     case bigIntLiteral @ BabelNodeInfo(BabelAst.BigIntLiteral)       => astForBigIntLiteral(bigIntLiteral)
+    case templateLiteral @ BabelNodeInfo(BabelAst.TemplateLiteral)   => astForTemplateLiteral(templateLiteral)
+    case templateElement @ BabelNodeInfo(BabelAst.TemplateElement)   => astForTemplateElement(templateElement)
     case other                                                       => notHandledYet(other)
   }
 

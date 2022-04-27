@@ -147,12 +147,12 @@ class AstCreationPassTest extends AbstractPassTest {
 
       def fooCall = methodBlock.expandAst(NodeTypes.CALL)
       fooCall.checkNodeCount(1)
-      fooCall.checkProperty(PropertyNames.CODE, """foo(__Runtime.TO_STRING("Hello ",world,"!"))""")
+      fooCall.checkProperty(PropertyNames.CODE, """foo(__Runtime.TO_STRING("Hello ", world, "!"))""")
 
       def templateCall = fooCall.expandAst(NodeTypes.CALL)
       templateCall.checkNodeCount(1)
       templateCall.checkProperty(PropertyNames.NAME, "__Runtime.TO_STRING")
-      templateCall.checkProperty(PropertyNames.CODE, """__Runtime.TO_STRING("Hello ",world,"!")""")
+      templateCall.checkProperty(PropertyNames.CODE, """__Runtime.TO_STRING("Hello ", world, "!")""")
 
       def argument1 = templateCall.expandAst().filter(PropertyNames.ORDER, 1)
       argument1.checkNodeCount(1)
@@ -180,7 +180,7 @@ class AstCreationPassTest extends AbstractPassTest {
       def call = methodBlock.expandAst(NodeTypes.CALL)
       call.checkNodeCount(1)
       call.checkProperty(PropertyNames.NAME, "__Runtime.TO_STRING")
-      call.checkProperty(PropertyNames.CODE, "__Runtime.TO_STRING(\"\",x + 1,\"\")")
+      call.checkProperty(PropertyNames.CODE, "__Runtime.TO_STRING(\"\", x + 1, \"\")")
 
       def argument1 = call.expandAst().filter(PropertyNames.ORDER, 1)
       argument1.checkNodeCount(1)
@@ -207,7 +207,7 @@ class AstCreationPassTest extends AbstractPassTest {
 
       def rawCall = methodBlock.expandAst(NodeTypes.CALL)
       rawCall.checkNodeCount(1)
-      rawCall.checkProperty(PropertyNames.CODE, """String.raw(__Runtime.TO_STRING("../","\.."), 42)""")
+      rawCall.checkProperty(PropertyNames.CODE, """String.raw(__Runtime.TO_STRING("../", "\.."), 42)""")
 
       def rawCallArg = rawCall.expandAst(NodeTypes.LITERAL)
       rawCallArg.checkNodeCount(1)
@@ -220,7 +220,7 @@ class AstCreationPassTest extends AbstractPassTest {
       runtimeCall.checkNodeCount(1)
       runtimeCall.checkProperty(PropertyNames.ORDER, 2)
       runtimeCall.checkProperty(PropertyNames.ARGUMENT_INDEX, 1)
-      runtimeCall.checkProperty(PropertyNames.CODE, """__Runtime.TO_STRING("../","\..")""")
+      runtimeCall.checkProperty(PropertyNames.CODE, """__Runtime.TO_STRING("../", "\..")""")
 
       def argument1 =
         runtimeCall.expandAst(NodeTypes.LITERAL).filter(PropertyNames.CODE, "\"../\"")
