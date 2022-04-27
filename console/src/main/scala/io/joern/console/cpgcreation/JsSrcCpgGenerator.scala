@@ -1,5 +1,6 @@
 package io.joern.console.cpgcreation
 
+import better.files.File
 import io.joern.console.FrontendConfig
 
 import java.nio.file.Path
@@ -13,6 +14,9 @@ case class JsSrcCpgGenerator(config: FrontendConfig, rootPath: Path) extends Cpg
     outputPath: String = "cpg.bin.zip",
     namespaces: List[String] = List()
   ): Option[String] = {
+    val packageJson = File(inputPath) / "package.json"
+    packageJson.createIfNotExists()
+    packageJson.deleteOnExit()
     val jssrc2cpgsh = rootPath.resolve("jssrc2cpg.sh").toString
     val arguments   = Seq(inputPath, "--output", outputPath) ++ config.cmdLineParams
     runShellCommand(jssrc2cpgsh, arguments).map(_ => outputPath)
