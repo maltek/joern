@@ -127,4 +127,39 @@ trait AstForStatementsCreator {
     Ast(forNode).withChild(initAst).withChild(testAst).withChild(updateAst).withChild(bodyAst)
   }
 
+  protected def astForBreakStatement(breakStmt: BabelNodeInfo): Ast =
+    Ast(createControlStructureNode(breakStmt, ControlStructureTypes.BREAK))
+
+  private def astsForSwitchCase(switchCase: BabelNodeInfo): List[Ast] = {
+    val labelAst = Ast(createJumpTarget(switchCase))
+    val testAst = safeObj(switchCase.json, "test") match {
+      case Some(test) => astForNode(Obj(test))
+      case None       => Ast()
+    }
+    val consequentAsts = astForNodes(switchCase.json("consequent").arr.toList)
+    List(labelAst, testAst) ++ consequentAsts
+  }
+
+  protected def astForSwitchStatement(switchStmt: BabelNodeInfo): Ast = {
+    val switchNode = createControlStructureNode(switchStmt, ControlStructureTypes.SWITCH)
+
+    val switchExpressionAst = astForNode(switchStmt.json("discriminant"))
+
+    val blockId = createBlockNode(switchNode.code, switchStmt.lineNumber, switchNode.columnNumber)
+    scope.pushNewBlockScope(blockId)
+    localAstParentStack.push(blockId)
+
+    val casesAsts = switchStmt.json("cases").arr.flatMap(c => astsForSwitchCase(createBabelNodeInfo(c)))
+    setArgumentIndices(casesAsts.toList)
+
+    scope.popScope()
+    localAstParentStack.pop()
+
+    setArgumentIndices(List(switchExpressionAst, Ast(blockId)))
+    Ast(switchNode)
+      .withChild(switchExpressionAst)
+      .withConditionEdge(switchNode, switchExpressionAst.nodes.head)
+      .withChild(Ast(blockId).withChildren(casesAsts))
+  }
+
 }

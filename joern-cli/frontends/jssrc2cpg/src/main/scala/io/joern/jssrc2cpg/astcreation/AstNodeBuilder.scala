@@ -76,6 +76,17 @@ trait AstNodeBuilder {
       .columnNumber(column)
   }
 
+  protected def createJumpTarget(switchCase: BabelNodeInfo): NewJumpTarget = {
+    val name = if (switchCase.json("test").isNull) "default" else "case"
+    val code = switchCase.code.substring(0, switchCase.code.indexOf(":") + 1)
+    NewJumpTarget()
+      .parserTypeName(switchCase.node.toString)
+      .name(name)
+      .code(code)
+      .lineNumber(switchCase.lineNumber)
+      .columnNumber(switchCase.columnNumber)
+  }
+
   protected def createControlStructureNode(node: BabelNodeInfo, controlStructureType: String): NewControlStructure = {
     val line   = node.lineNumber
     val column = node.columnNumber
