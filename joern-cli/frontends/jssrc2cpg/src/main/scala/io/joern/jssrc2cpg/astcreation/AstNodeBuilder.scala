@@ -77,12 +77,15 @@ trait AstNodeBuilder {
   }
 
   protected def createJumpTarget(switchCase: BabelNodeInfo): NewJumpTarget = {
-    val name = if (switchCase.json("test").isNull) "default" else "case"
-    val code = switchCase.code.substring(0, switchCase.code.indexOf(":") + 1)
+    val (switchName, switchCode) = if (switchCase.json("test").isNull) {
+      ("default", "default:")
+    } else {
+      ("case", s"case ${code(switchCase.json("test"))}:")
+    }
     NewJumpTarget()
       .parserTypeName(switchCase.node.toString)
-      .name(name)
-      .code(code)
+      .name(switchName)
+      .code(switchCode)
       .lineNumber(switchCase.lineNumber)
       .columnNumber(switchCase.columnNumber)
   }
