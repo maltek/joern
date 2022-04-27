@@ -113,6 +113,46 @@ trait AstForExpressionsCreator {
     createLiteralNode(thisExpr.code, Some(Defines.ANY.label), thisExpr.lineNumber, thisExpr.columnNumber)
   )
 
+  protected def astForNewExpression(newExpr: BabelNodeInfo): Ast = {
+    val callee    = newExpr.json("callee")
+    val blockNode = createBlockNode(newExpr.code, newExpr.lineNumber, newExpr.columnNumber)
+
+    scope.pushNewBlockScope(blockNode)
+    localAstParentStack.push(blockNode)
+
+    val tmpAllocName      = generateUnusedVariableName(usedVariableNames, Set.empty, "_tmp")
+    val localTmpAllocNode = createLocalNode(tmpAllocName, Defines.ANY.label)
+    diffGraph.addEdge(localAstParentStack.head, localTmpAllocNode, EdgeTypes.AST)
+
+    val tmpAllocNode1 = createIdentifierNode(tmpAllocName, newExpr)
+
+    val allocCallNode =
+      createCallNode(".alloc", Operators.alloc, DispatchTypes.STATIC_DISPATCH, newExpr.lineNumber, newExpr.columnNumber)
+
+    val assignmentTmpAllocCallNode =
+      createAssignment(
+        tmpAllocNode1,
+        allocCallNode,
+        s"$tmpAllocName = ${allocCallNode.code}",
+        newExpr.lineNumber,
+        newExpr.columnNumber
+      )
+
+    val tmpAllocNode2 = createIdentifierNode(tmpAllocName, newExpr)
+
+    val receiverNode = astForNode(callee)
+    Ast.storeInDiffGraph(receiverNode, diffGraph)
+    val callNode = handleCallNodeArgs(newExpr, receiverNode.nodes.head, tmpAllocNode2, receiverNode.nodes.head, None)
+
+    val tmpAllocReturnNode = Ast(createIdentifierNode(tmpAllocName, newExpr))
+
+    scope.popScope()
+    localAstParentStack.pop()
+
+    setArgumentIndices(List(assignmentTmpAllocCallNode, callNode, tmpAllocReturnNode))
+    Ast(blockNode).withChild(assignmentTmpAllocCallNode).withChild(callNode).withChild(tmpAllocReturnNode)
+  }
+
   protected def astForMemberExpression(memberExpr: BabelNodeInfo): Ast = {
     val baseAst = astForNode(memberExpr.json("object"))
     Ast.storeInDiffGraph(baseAst, diffGraph)

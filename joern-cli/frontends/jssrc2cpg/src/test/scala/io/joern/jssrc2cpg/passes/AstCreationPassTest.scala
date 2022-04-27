@@ -3842,23 +3842,24 @@ class AstCreationPassTest extends AbstractPassTest {
     "have correct structure for simple new" in AstFixture("new MyClass()") { cpg =>
       def program = cpg.method.nameExact(":program")
       program.checkNodeCount(1)
-      def newCall =
-        program
+
+      def programBlock = program.expandAst(NodeTypes.BLOCK)
+      programBlock.checkNodeCount(1)
+
+      def newCallBlock =
+        programBlock
           .expandAst(NodeTypes.BLOCK)
           .filter(PropertyNames.CODE, "new MyClass()")
-      newCall.checkNodeCount(1)
+      newCallBlock.checkNodeCount(1)
 
-      def block = newCall.expandAst(NodeTypes.BLOCK)
-      block.checkNodeCount(1)
+      val tmpName = "_tmp_0"
 
-      def tmpName = "_tmp_0"
-
-      def localTmp = block.expandAst(NodeTypes.LOCAL)
+      def localTmp = newCallBlock.expandAst(NodeTypes.LOCAL)
       localTmp.checkNodeCount(1)
       localTmp.checkProperty(PropertyNames.NAME, tmpName)
 
       def tmpAssignment =
-        block.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, tmpName + " = .alloc")
+        newCallBlock.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, tmpName + " = .alloc")
       tmpAssignment.checkNodeCount(1)
       tmpAssignment.checkProperty(PropertyNames.NAME, Operators.assignment)
 
@@ -3869,11 +3870,11 @@ class AstCreationPassTest extends AbstractPassTest {
 
       def allocCall = tmpAssignment.expandAst(NodeTypes.CALL)
       allocCall.checkNodeCount(1)
-      allocCall.checkProperty(PropertyNames.NAME, ".alloc")
+      allocCall.checkProperty(PropertyNames.NAME, Operators.alloc)
       allocCall.checkProperty(PropertyNames.CODE, ".alloc")
 
       def constructorCall =
-        block.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "MyClass()")
+        newCallBlock.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "MyClass()")
       constructorCall.checkNodeCount(1)
 
       def name =
@@ -3883,20 +3884,24 @@ class AstCreationPassTest extends AbstractPassTest {
       def receiver =
         constructorCall.expandReceiver(NodeTypes.IDENTIFIER).filter(PropertyNames.NAME, "MyClass")
       receiver.checkNodeCount(1)
+      receiver.checkProperty(PropertyNames.ORDER, 1)
+      receiver.checkProperty(PropertyNames.ARGUMENT_INDEX, 0)
 
       def tmpArg0 =
         constructorCall.expandAst(NodeTypes.IDENTIFIER).filter(PropertyNames.NAME, tmpName)
       tmpArg0.checkNodeCount(1)
-      tmpArg0.checkProperty(PropertyNames.ARGUMENT_INDEX, 0)
+      tmpArg0.checkProperty(PropertyNames.ORDER, 2)
+      tmpArg0.checkProperty(PropertyNames.ARGUMENT_INDEX, 1)
 
       def tmpArg0Argument =
         constructorCall
           .expand(EdgeTypes.ARGUMENT, NodeTypes.IDENTIFIER)
           .filter(PropertyNames.NAME, tmpName)
       tmpArg0Argument.checkNodeCount(1)
-      tmpArg0Argument.checkProperty(PropertyNames.ARGUMENT_INDEX, 0)
+      tmpArg0Argument.checkProperty(PropertyNames.ORDER, 2)
+      tmpArg0Argument.checkProperty(PropertyNames.ARGUMENT_INDEX, 1)
 
-      def returnTmp = block.expandAst(NodeTypes.IDENTIFIER)
+      def returnTmp = newCallBlock.expandAst(NodeTypes.IDENTIFIER)
       returnTmp.checkNodeCount(1)
       returnTmp.checkProperty(PropertyNames.NAME, tmpName)
     }
@@ -3904,23 +3909,24 @@ class AstCreationPassTest extends AbstractPassTest {
     "have correct structure for simple new with arguments" in AstFixture("new MyClass(arg1, arg2)") { cpg =>
       def program = cpg.method.nameExact(":program")
       program.checkNodeCount(1)
-      def newCall =
-        program
+
+      def programBlock = program.expandAst(NodeTypes.BLOCK)
+      programBlock.checkNodeCount(1)
+
+      def newCallBlock =
+        programBlock
           .expandAst(NodeTypes.BLOCK)
           .filter(PropertyNames.CODE, "new MyClass(arg1, arg2)")
-      newCall.checkNodeCount(1)
+      newCallBlock.checkNodeCount(1)
 
-      def block = newCall.expandAst(NodeTypes.BLOCK)
-      block.checkNodeCount(1)
+      val tmpName = "_tmp_0"
 
-      def tmpName = "_tmp_0"
-
-      def localTmp = block.expandAst(NodeTypes.LOCAL)
+      def localTmp = newCallBlock.expandAst(NodeTypes.LOCAL)
       localTmp.checkNodeCount(1)
       localTmp.checkProperty(PropertyNames.NAME, tmpName)
 
       def tmpAssignment =
-        block.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, tmpName + " = .alloc")
+        newCallBlock.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, tmpName + " = .alloc")
       tmpAssignment.checkNodeCount(1)
       tmpAssignment.checkProperty(PropertyNames.NAME, Operators.assignment)
 
@@ -3931,11 +3937,11 @@ class AstCreationPassTest extends AbstractPassTest {
 
       def allocCall = tmpAssignment.expandAst(NodeTypes.CALL)
       allocCall.checkNodeCount(1)
-      allocCall.checkProperty(PropertyNames.NAME, ".alloc")
+      allocCall.checkProperty(PropertyNames.NAME, Operators.alloc)
       allocCall.checkProperty(PropertyNames.CODE, ".alloc")
 
       def constructorCall =
-        block.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "MyClass(arg1, arg2)")
+        newCallBlock.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "MyClass(arg1, arg2)")
       constructorCall.checkNodeCount(1)
 
       def name =
@@ -3945,44 +3951,48 @@ class AstCreationPassTest extends AbstractPassTest {
       def receiver =
         constructorCall.expandReceiver(NodeTypes.IDENTIFIER).filter(PropertyNames.NAME, "MyClass")
       receiver.checkNodeCount(1)
+      receiver.checkProperty(PropertyNames.ORDER, 1)
+      receiver.checkProperty(PropertyNames.ARGUMENT_INDEX, 0)
 
       def tmpArg0 =
         constructorCall.expandAst(NodeTypes.IDENTIFIER).filter(PropertyNames.NAME, tmpName)
       tmpArg0.checkNodeCount(1)
-      tmpArg0.checkProperty(PropertyNames.ARGUMENT_INDEX, 0)
+      tmpArg0.checkProperty(PropertyNames.ORDER, 2)
+      tmpArg0.checkProperty(PropertyNames.ARGUMENT_INDEX, 1)
 
       def tmpArg0Argument =
         constructorCall
           .expand(EdgeTypes.ARGUMENT, NodeTypes.IDENTIFIER)
           .filter(PropertyNames.NAME, tmpName)
       tmpArg0Argument.checkNodeCount(1)
-      tmpArg0Argument.checkProperty(PropertyNames.ARGUMENT_INDEX, 0)
+      tmpArg0Argument.checkProperty(PropertyNames.ORDER, 2)
+      tmpArg0Argument.checkProperty(PropertyNames.ARGUMENT_INDEX, 1)
 
       def arg1 =
         constructorCall.expandAst(NodeTypes.IDENTIFIER).filter(PropertyNames.NAME, "arg1")
       arg1.checkNodeCount(1)
-      arg1.checkProperty(PropertyNames.ARGUMENT_INDEX, 1)
+      arg1.checkProperty(PropertyNames.ARGUMENT_INDEX, 2)
 
       def arg1Argument =
         constructorCall
           .expand(EdgeTypes.ARGUMENT, NodeTypes.IDENTIFIER)
           .filter(PropertyNames.NAME, "arg1")
       arg1Argument.checkNodeCount(1)
-      arg1Argument.checkProperty(PropertyNames.ARGUMENT_INDEX, 1)
+      arg1Argument.checkProperty(PropertyNames.ARGUMENT_INDEX, 2)
 
       def arg2 =
         constructorCall.expandAst(NodeTypes.IDENTIFIER).filter(PropertyNames.NAME, "arg2")
       arg2.checkNodeCount(1)
-      arg2.checkProperty(PropertyNames.ARGUMENT_INDEX, 2)
+      arg2.checkProperty(PropertyNames.ARGUMENT_INDEX, 3)
 
       def arg2Argument =
         constructorCall
           .expand(EdgeTypes.ARGUMENT, NodeTypes.IDENTIFIER)
           .filter(PropertyNames.NAME, "arg2")
       arg2Argument.checkNodeCount(1)
-      arg2Argument.checkProperty(PropertyNames.ARGUMENT_INDEX, 2)
+      arg2Argument.checkProperty(PropertyNames.ARGUMENT_INDEX, 3)
 
-      def returnTmp = block.expandAst(NodeTypes.IDENTIFIER)
+      def returnTmp = newCallBlock.expandAst(NodeTypes.IDENTIFIER)
       returnTmp.checkNodeCount(1)
       returnTmp.checkProperty(PropertyNames.NAME, tmpName)
     }
@@ -3990,23 +4000,24 @@ class AstCreationPassTest extends AbstractPassTest {
     "have correct structure for new with access path" in AstFixture("new foo.bar.MyClass()") { cpg =>
       def program = cpg.method.nameExact(":program")
       program.checkNodeCount(1)
-      def newCall =
-        program
+
+      def programBlock = program.expandAst(NodeTypes.BLOCK)
+      programBlock.checkNodeCount(1)
+
+      def newCallBlock =
+        programBlock
           .expandAst(NodeTypes.BLOCK)
           .filter(PropertyNames.CODE, "new foo.bar.MyClass()")
-      newCall.checkNodeCount(1)
+      newCallBlock.checkNodeCount(1)
 
-      def block = newCall.expandAst(NodeTypes.BLOCK)
-      block.checkNodeCount(1)
+      val tmpName = "_tmp_0"
 
-      def tmpName = "_tmp_0"
-
-      def localTmp = block.expandAst(NodeTypes.LOCAL)
+      def localTmp = newCallBlock.expandAst(NodeTypes.LOCAL)
       localTmp.checkNodeCount(1)
       localTmp.checkProperty(PropertyNames.NAME, tmpName)
 
       def tmpAssignment =
-        block.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, tmpName + " = .alloc")
+        newCallBlock.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, tmpName + " = .alloc")
       tmpAssignment.checkNodeCount(1)
       tmpAssignment.checkProperty(PropertyNames.NAME, Operators.assignment)
 
@@ -4017,11 +4028,11 @@ class AstCreationPassTest extends AbstractPassTest {
 
       def allocCall = tmpAssignment.expandAst(NodeTypes.CALL)
       allocCall.checkNodeCount(1)
-      allocCall.checkProperty(PropertyNames.NAME, ".alloc")
+      allocCall.checkProperty(PropertyNames.NAME, Operators.alloc)
       allocCall.checkProperty(PropertyNames.CODE, ".alloc")
 
       def constructorCall =
-        block.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "foo.bar.MyClass()")
+        newCallBlock.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "foo.bar.MyClass()")
       constructorCall.checkNodeCount(1)
 
       def path =
@@ -4035,47 +4046,55 @@ class AstCreationPassTest extends AbstractPassTest {
           .filter(PropertyNames.CODE, "foo.bar.MyClass")
       receiver.checkProperty(PropertyNames.NAME, Operators.fieldAccess)
       receiver.checkNodeCount(1)
+      receiver.checkProperty(PropertyNames.ORDER, 1)
+      receiver.checkProperty(PropertyNames.ARGUMENT_INDEX, 0)
 
       def tmpArg0 =
         constructorCall.expandAst(NodeTypes.IDENTIFIER).filter(PropertyNames.NAME, tmpName)
       tmpArg0.checkNodeCount(1)
-      tmpArg0.checkProperty(PropertyNames.ARGUMENT_INDEX, 0)
+      tmpArg0.checkProperty(PropertyNames.ORDER, 2)
+      tmpArg0.checkProperty(PropertyNames.ARGUMENT_INDEX, 1)
 
       def tmpArg0Argument =
         constructorCall
           .expand(EdgeTypes.ARGUMENT, NodeTypes.IDENTIFIER)
           .filter(PropertyNames.NAME, tmpName)
       tmpArg0Argument.checkNodeCount(1)
-      tmpArg0Argument.checkProperty(PropertyNames.ARGUMENT_INDEX, 0)
+      tmpArg0Argument.checkProperty(PropertyNames.ORDER, 2)
+      tmpArg0Argument.checkProperty(PropertyNames.ARGUMENT_INDEX, 1)
 
-      def returnTmp = block.expandAst(NodeTypes.IDENTIFIER)
+      def returnTmp = newCallBlock.expandAst(NodeTypes.IDENTIFIER)
       returnTmp.checkNodeCount(1)
       returnTmp.checkProperty(PropertyNames.NAME, tmpName)
     }
 
-    "have correct structure for throw new exceptions" in AstFixture("function() { throw new Foo() }") { cpg =>
-      def program = cpg.method.nameExact(":program")
-      program.checkNodeCount(1)
+    "have correct structure for throw new exceptions" in AstFixture("function foo() { throw new Foo() }") { cpg =>
+      def fooBlock = cpg.method
+        .nameExact("foo")
+        .expandAst(NodeTypes.BLOCK)
+      fooBlock.checkNodeCount(1)
 
       def throwCall =
-        cpg.method
-          .nameExact("anonymous")
-          .expandAst(NodeTypes.BLOCK)
-          .expandAst(NodeTypes.UNKNOWN) // throw call is simply an UNKNOWN
+        fooBlock
+          .expandAst(NodeTypes.CALL)
           .filter(PropertyNames.CODE, "throw new Foo()")
       throwCall.checkNodeCount(1)
+      throwCall.checkProperty(PropertyNames.NAME, "<operator>.throw")
 
-      def block = throwCall.expandAst(NodeTypes.BLOCK)
-      block.checkNodeCount(1)
+      def newCallBlock =
+        throwCall
+          .expandAst(NodeTypes.BLOCK)
+          .filter(PropertyNames.CODE, "new Foo()")
+      newCallBlock.checkNodeCount(1)
 
-      def tmpName = "_tmp_0"
+      val tmpName = "_tmp_0"
 
-      def localTmp = block.expandAst(NodeTypes.LOCAL)
+      def localTmp = newCallBlock.expandAst(NodeTypes.LOCAL)
       localTmp.checkNodeCount(1)
       localTmp.checkProperty(PropertyNames.NAME, tmpName)
 
       def tmpAssignment =
-        block.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, tmpName + " = .alloc")
+        newCallBlock.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, tmpName + " = .alloc")
       tmpAssignment.checkNodeCount(1)
       tmpAssignment.checkProperty(PropertyNames.NAME, Operators.assignment)
 
@@ -4086,11 +4105,11 @@ class AstCreationPassTest extends AbstractPassTest {
 
       def allocCall = tmpAssignment.expandAst(NodeTypes.CALL)
       allocCall.checkNodeCount(1)
-      allocCall.checkProperty(PropertyNames.NAME, ".alloc")
+      allocCall.checkProperty(PropertyNames.NAME, Operators.alloc)
       allocCall.checkProperty(PropertyNames.CODE, ".alloc")
 
       def constructorCall =
-        block.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "Foo()")
+        newCallBlock.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "Foo()")
       constructorCall.checkNodeCount(1)
 
       def name =
@@ -4100,20 +4119,24 @@ class AstCreationPassTest extends AbstractPassTest {
       def receiver =
         constructorCall.expandReceiver(NodeTypes.IDENTIFIER).filter(PropertyNames.NAME, "Foo")
       receiver.checkNodeCount(1)
+      receiver.checkProperty(PropertyNames.ORDER, 1)
+      receiver.checkProperty(PropertyNames.ARGUMENT_INDEX, 0)
 
       def tmpArg0 =
         constructorCall.expandAst(NodeTypes.IDENTIFIER).filter(PropertyNames.NAME, tmpName)
       tmpArg0.checkNodeCount(1)
-      tmpArg0.checkProperty(PropertyNames.ARGUMENT_INDEX, 0)
+      tmpArg0.checkProperty(PropertyNames.ORDER, 2)
+      tmpArg0.checkProperty(PropertyNames.ARGUMENT_INDEX, 1)
 
       def tmpArg0Argument =
         constructorCall
           .expand(EdgeTypes.ARGUMENT, NodeTypes.IDENTIFIER)
           .filter(PropertyNames.NAME, tmpName)
       tmpArg0Argument.checkNodeCount(1)
-      tmpArg0Argument.checkProperty(PropertyNames.ARGUMENT_INDEX, 0)
+      tmpArg0Argument.checkProperty(PropertyNames.ORDER, 2)
+      tmpArg0Argument.checkProperty(PropertyNames.ARGUMENT_INDEX, 1)
 
-      def returnTmp = block.expandAst(NodeTypes.IDENTIFIER)
+      def returnTmp = newCallBlock.expandAst(NodeTypes.IDENTIFIER)
       returnTmp.checkNodeCount(1)
       returnTmp.checkProperty(PropertyNames.NAME, tmpName)
     }

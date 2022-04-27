@@ -6,6 +6,7 @@ import io.joern.jssrc2cpg.parser.BabelNodeInfo
 import io.joern.jssrc2cpg.passes.Defines
 import io.joern.x2cpg.Ast
 import io.shiftleft.codepropertygraph.generated.ControlStructureTypes
+import io.shiftleft.codepropertygraph.generated.DispatchTypes
 import ujson.Obj
 import ujson.Value
 
@@ -129,6 +130,19 @@ trait AstForStatementsCreator {
 
   protected def astForBreakStatement(breakStmt: BabelNodeInfo): Ast =
     Ast(createControlStructureNode(breakStmt, ControlStructureTypes.BREAK))
+
+  protected def astForThrowStatement(throwStmt: BabelNodeInfo): Ast = {
+    val argumentAst = astForNode(throwStmt.json("argument"))
+    val throwCallNode =
+      createCallNode(
+        throwStmt.code,
+        "<operator>.throw",
+        DispatchTypes.STATIC_DISPATCH,
+        throwStmt.lineNumber,
+        throwStmt.columnNumber
+      )
+    callAst(throwCallNode, List(argumentAst))
+  }
 
   private def astsForSwitchCase(switchCase: BabelNodeInfo): List[Ast] = {
     val labelAst = Ast(createJumpTarget(switchCase))
