@@ -157,7 +157,17 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
     case other                                                           => notHandledYet(other)
   }
 
-  protected def astForNodes(jsons: List[Value]): List[Ast] = jsons.map(astForNode)
+  protected def astForNodes(jsons: List[Value]): List[Ast] = jsons.map { json =>
+    createBabelNodeInfo(json) match {
+      case f @ BabelNodeInfo(BabelAst.FunctionDeclaration) =>
+        astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
+      case f @ BabelNodeInfo(BabelAst.FunctionExpression) =>
+        astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
+      case f @ BabelNodeInfo(BabelAst.ArrowFunctionExpression) =>
+        astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
+      case _ => astForNode(json)
+    }
+  }
 
   private def astsForFile(file: BabelNodeInfo): List[Ast] = astsForProgram(createBabelNodeInfo(file.json("program")))
 
