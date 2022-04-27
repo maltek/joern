@@ -404,4 +404,19 @@ trait AstForExpressionsCreator {
     }
   }
 
+  def astForTemplateExpression(templateExpr: BabelNodeInfo): Ast = {
+    val argumentAst = astForNode(templateExpr.json("quasi"))
+    val callName    = code(templateExpr.json("tag"))
+    val callCode    = s"$callName(${codeOf(argumentAst.nodes.head)})"
+    val templateExprCall =
+      createCallNode(
+        callCode,
+        callName,
+        DispatchTypes.STATIC_DISPATCH,
+        templateExpr.lineNumber,
+        templateExpr.columnNumber
+      )
+    callAst(templateExprCall, List(argumentAst))
+  }
+
 }

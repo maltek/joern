@@ -207,20 +207,14 @@ class AstCreationPassTest extends AbstractPassTest {
 
       def rawCall = methodBlock.expandAst(NodeTypes.CALL)
       rawCall.checkNodeCount(1)
-      rawCall.checkProperty(PropertyNames.CODE, """String.raw(__Runtime.TO_STRING("../", "\.."), 42)""")
-
-      def rawCallArg = rawCall.expandAst(NodeTypes.LITERAL)
-      rawCallArg.checkNodeCount(1)
-      rawCallArg.checkProperty(PropertyNames.ORDER, 3)
-      rawCallArg.checkProperty(PropertyNames.ARGUMENT_INDEX, 2)
-      rawCallArg.checkProperty(PropertyNames.CODE, "42")
+      rawCall.checkProperty(PropertyNames.CODE, """String.raw(__Runtime.TO_STRING("../", 42, "\.."))""")
 
       def runtimeCall =
         rawCall.expandAst(NodeTypes.CALL).filter(PropertyNames.NAME, "__Runtime.TO_STRING")
       runtimeCall.checkNodeCount(1)
-      runtimeCall.checkProperty(PropertyNames.ORDER, 2)
+      runtimeCall.checkProperty(PropertyNames.ORDER, 1)
       runtimeCall.checkProperty(PropertyNames.ARGUMENT_INDEX, 1)
-      runtimeCall.checkProperty(PropertyNames.CODE, """__Runtime.TO_STRING("../", "\..")""")
+      runtimeCall.checkProperty(PropertyNames.CODE, """__Runtime.TO_STRING("../", 42, "\..")""")
 
       def argument1 =
         runtimeCall.expandAst(NodeTypes.LITERAL).filter(PropertyNames.CODE, "\"../\"")
@@ -228,11 +222,16 @@ class AstCreationPassTest extends AbstractPassTest {
       argument1.checkProperty(PropertyNames.ORDER, 1)
       argument1.checkProperty(PropertyNames.ARGUMENT_INDEX, 1)
 
-      def argument2 =
-        runtimeCall.expandAst(NodeTypes.LITERAL).filter(PropertyNames.CODE, "\"\\..\"")
+      def argument2 = runtimeCall.expandAst(NodeTypes.LITERAL).filter(PropertyNames.CODE, "42")
       argument2.checkNodeCount(1)
       argument2.checkProperty(PropertyNames.ORDER, 2)
       argument2.checkProperty(PropertyNames.ARGUMENT_INDEX, 2)
+
+      def argument3 =
+        runtimeCall.expandAst(NodeTypes.LITERAL).filter(PropertyNames.CODE, "\"\\..\"")
+      argument3.checkNodeCount(1)
+      argument3.checkProperty(PropertyNames.ORDER, 3)
+      argument3.checkProperty(PropertyNames.ARGUMENT_INDEX, 3)
     }
 
     "have correct structure for try" in AstFixture("""

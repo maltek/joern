@@ -32,7 +32,7 @@ trait AstForPrimitivesCreator {
   protected def astForTemplateElement(templateElement: BabelNodeInfo): Ast =
     Ast(
       createLiteralNode(
-        s"\"${templateElement.json("value")("cooked").str}\"",
+        s"\"${templateElement.json("value")("raw").str}\"",
         Some(Defines.STRING.label),
         templateElement.lineNumber,
         templateElement.columnNumber
@@ -116,9 +116,9 @@ trait AstForPrimitivesCreator {
 
     val callName = "__Runtime.TO_STRING"
     val argsCodes = expressions.zip(quasis).flatMap { case (expression, quasi) =>
-      List(s"\"${quasi("value")("cooked").str}\"", code(expression))
+      List(s"\"${quasi("value")("raw").str}\"", code(expression))
     }
-    val callCode = s"$callName${(argsCodes :+ s"\"${quasisTail("value")("cooked").str}\"").mkString("(", ", ", ")")}"
+    val callCode = s"$callName${(argsCodes :+ s"\"${quasisTail("value")("raw").str}\"").mkString("(", ", ", ")")}"
     val templateCall =
       createCallNode(
         callCode,
