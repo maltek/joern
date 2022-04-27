@@ -20,6 +20,12 @@ trait AstNodeBuilder {
       .lineNumber(node.lineNumber)
       .columnNumber(node.columnNumber)
 
+  protected def createDependencyNode(name: String, groupId: String, version: String): NewDependency =
+    NewDependency()
+      .name(name)
+      .dependencyGroupId(groupId)
+      .version(version)
+
   protected def createTypeRefNode(code: String, typeFullName: String, classNode: BabelNodeInfo): NewTypeRef =
     NewTypeRef()
       .code(code)
@@ -113,6 +119,8 @@ trait AstNodeBuilder {
       .lineNumber(line)
       .columnNumber(column)
   }
+
+  protected def createImportNode(code: String): NewImport = NewImport().code(code.stripSuffix(";"))
 
   protected def createMemberNode(name: String, code: String, dynamicTypeOption: Option[String]): NewMember =
     NewMember()

@@ -15,6 +15,8 @@ import io.shiftleft.codepropertygraph.generated.{
   Operators,
   PropertyNames
 }
+import io.shiftleft.codepropertygraph.generated.nodes.Import
+import io.shiftleft.codepropertygraph.generated.nodes.NamespaceBlock
 import io.shiftleft.semanticcpg.language._
 import io.shiftleft.semanticcpg.layers.LayerCreatorContext
 import overflowdb.Node
@@ -4498,6 +4500,20 @@ class AstCreationPassTest extends AbstractPassTest {
       def depB = getDependencies(cpg).filter(PropertyNames.NAME, "b")
       depB.checkNodeCount(1)
       depB.checkProperty(PropertyNames.DEPENDENCY_GROUP_ID, "depB")
+    }
+
+    "have correct import nodes" in AstFixture("""
+        |import {a} from "depA";
+        |import {b} from "depB";
+        |""".stripMargin) { cpg =>
+      val List(x: Import, y: Import) = getImports(cpg).l
+      x.code shouldBe "import {a} from \"depA\""
+      y.code shouldBe "import {b} from \"depB\""
+      x.astIn.l match {
+        case List(n: NamespaceBlock) =>
+          n.fullName shouldBe "code.js:<global>"
+        case _ => fail()
+      }
     }
 
     "have correct dependencies (require)" in AstFixture("""
