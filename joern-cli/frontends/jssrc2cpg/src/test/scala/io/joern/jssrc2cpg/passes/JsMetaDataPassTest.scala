@@ -10,7 +10,7 @@ class JsMetaDataPassTest extends AbstractPassTest {
 
   "MetaDataPass" should {
     val cpg = Cpg.emptyCpg
-    new JsMetaDataPass(cpg, "somehash").createAndApply()
+    new JsMetaDataPass(cpg).createAndApply()
 
     "create exactly 1 node" in {
       cpg.graph.V.asScala.size shouldBe 1
@@ -22,10 +22,6 @@ class JsMetaDataPassTest extends AbstractPassTest {
 
     "create a metadata node with correct language" in {
       cpg.metaData.language.l shouldBe List(Languages.JSSRC)
-    }
-
-    "create a metadata node with a hash" in {
-      cpg.metaData.hash.l shouldBe List("somehash")
     }
   }
 
