@@ -51,9 +51,10 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
   override def absolutePath(filename: String): String = filename
 
   override def createAst(): DiffGraphBuilder = {
+    val fileNode       = NewFile().name(parserResult.filename).order(1)
     val namespaceBlock = globalNamespaceBlock()
     methodAstParentStack.push(namespaceBlock)
-    val ast = Ast(namespaceBlock).withChild(createProgramMethod())
+    val ast = Ast(fileNode).withChild(Ast(namespaceBlock).withChild(createProgramMethod()))
     Ast.storeInDiffGraph(ast, diffGraph)
     createVariableReferenceLinks()
     diffGraph
