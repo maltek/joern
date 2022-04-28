@@ -67,17 +67,11 @@ trait AstForDeclarationsCreator {
     } else {
       val destAst = astForNode(id.json)
       val sourceAst = init.get match {
-        case f @ BabelNodeInfo(BabelAst.FunctionDeclaration) =>
-          astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
-        case f @ BabelNodeInfo(BabelAst.FunctionExpression) =>
-          astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
-        case f @ BabelNodeInfo(BabelAst.ArrowFunctionExpression) =>
-          astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
         case requireCall if requireCall.code.startsWith("require(") =>
           handleRequireCallForDependencies(id.json, init.get.json)
-          astForNode(requireCall.json)
+          astForNodeWithFunctionReference(requireCall.json)
         case initExpr =>
-          astForNode(initExpr.json)
+          astForNodeWithFunctionReference(initExpr.json)
       }
       val assigmentCallAst =
         createAssignment(

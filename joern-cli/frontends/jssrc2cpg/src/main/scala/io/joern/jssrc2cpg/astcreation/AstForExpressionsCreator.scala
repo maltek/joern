@@ -194,15 +194,7 @@ trait AstForExpressionsCreator {
     }
 
     val lhsAst = astForNode(assignment.json("left"))
-    val rhsAst = createBabelNodeInfo(assignment.json("right")) match {
-      case f @ BabelNodeInfo(BabelAst.FunctionDeclaration) =>
-        astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
-      case f @ BabelNodeInfo(BabelAst.FunctionExpression) =>
-        astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
-      case f @ BabelNodeInfo(BabelAst.ArrowFunctionExpression) =>
-        astForFunctionDeclaration(f, shouldCreateFunctionReference = true)
-      case _ => astForNode(assignment.json("right"))
-    }
+    val rhsAst = astForNodeWithFunctionReference(assignment.json("right"))
 
     val callNode =
       createCallNode(assignment.code, op, DispatchTypes.STATIC_DISPATCH, assignment.lineNumber, assignment.columnNumber)
@@ -439,7 +431,8 @@ trait AstForExpressionsCreator {
         case objProperty @ BabelNodeInfo(BabelAst.ObjectProperty) =>
           val keyName = code(objProperty.json("key"))
           val keyId   = createFieldIdentifierNode(keyName, objProperty.lineNumber, objProperty.columnNumber)
-          (keyId, astForNode(objProperty.json("value")))
+          val ast     = astForNodeWithFunctionReference(objProperty.json("value"))
+          (keyId, ast)
         case spread @ BabelNodeInfo(BabelAst.SpreadElement) =>
           val keyName = code(spread.json("argument"))
           val keyId   = createFieldIdentifierNode(keyName, spread.lineNumber, spread.columnNumber)
