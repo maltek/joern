@@ -14,8 +14,8 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: '16'
-      - name: Install astgen for jssrc2cpg
-        run: npm install -g astgen
+      - name: Install @joernio/astgen for jssrc2cpg
+        run: npm install -g @joernio/astgen
       - uses: olafurpg/setup-scala@v10
         with:
           java-version: adopt@1.11

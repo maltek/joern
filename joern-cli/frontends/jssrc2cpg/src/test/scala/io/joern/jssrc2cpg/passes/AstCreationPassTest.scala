@@ -4950,18 +4950,14 @@ class AstCreationPassTest extends AbstractPassTest {
         val file = dir / "code.js"
         file.write(code)
         file.deleteOnExit()
-        val cpg     = new JsSrc2CpgFrontend().execute(dir.toJava)
-        val context = new LayerCreatorContext(cpg)
-        new Base().run(context)
+        val cpg = new JsSrc2CpgFrontend().execute(dir.toJava)
         f(cpg)
       }
     }
 
     def apply(testFile: File)(f: Cpg => Unit): Unit = {
-      val file    = testFile
-      val cpg     = new JsSrc2CpgFrontend().execute(file.parent.toJava)
-      val context = new LayerCreatorContext(cpg)
-      new Base().run(context)
+      val file = testFile
+      val cpg  = new JsSrc2CpgFrontend().execute(file.parent.toJava)
       f(cpg)
     }
   }
