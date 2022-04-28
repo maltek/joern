@@ -4558,11 +4558,23 @@ class AstCreationPassTest extends AbstractPassTest {
     "have correct import nodes" in AstFixture("""
         |import {a} from "depA";
         |import {b} from "depB";
+        |import {c} from "";
+        |import * as d from "depD";
         |""".stripMargin) { cpg =>
-      val List(x: Import, y: Import) = getImports(cpg).l
-      x.code shouldBe "import {a} from \"depA\""
-      y.code shouldBe "import {b} from \"depB\""
-      x.astIn.l match {
+      val List(a: Import, b: Import, c: Import, d: Import) = getImports(cpg).l
+      a.code shouldBe "import {a} from \"depA\""
+      a.importedEntity shouldBe Some("depA")
+      a.importedAs shouldBe Some("a")
+      b.code shouldBe "import {b} from \"depB\""
+      b.importedEntity shouldBe Some("depB")
+      b.importedAs shouldBe Some("b")
+      c.code shouldBe "import {c} from \"\""
+      c.importedEntity should not be defined
+      c.importedAs shouldBe Some("c")
+      d.code shouldBe "import * as d from \"depD\""
+      d.importedEntity shouldBe Some("depD")
+      d.importedAs shouldBe Some("d")
+      a.astIn.l match {
         case List(n: NamespaceBlock) =>
           n.fullName shouldBe "code.js:<global>"
         case _ => fail()

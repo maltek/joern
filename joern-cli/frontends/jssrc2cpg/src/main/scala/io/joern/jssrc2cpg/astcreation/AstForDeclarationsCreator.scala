@@ -91,14 +91,14 @@ trait AstForDeclarationsCreator {
     val source     = impDecl.json("source")("value").str
     val specifiers = impDecl.json("specifiers").arr
 
-    createImportNodeAndAttachToAst(impDecl)
-
     if (specifiers.isEmpty) {
       diffGraph.addNode(createDependencyNode(source, source, "import"))
+      createImportNodeAndAttachToAst(impDecl, source, source)
       Ast()
     } else {
       val depNodes = impDecl.json("specifiers").arr.map { importSpecifier =>
         val importedName = importSpecifier("local")("name").str
+        createImportNodeAndAttachToAst(impDecl, source, importedName)
         createDependencyNode(importedName, source, "import")
       }
       depNodes.foreach(diffGraph.addNode)
@@ -106,8 +106,12 @@ trait AstForDeclarationsCreator {
     }
   }
 
-  private def createImportNodeAndAttachToAst(impDecl: BabelNodeInfo): Unit = {
-    val impNode = createImportNode(impDecl.code)
+  private def createImportNodeAndAttachToAst(
+    impDecl: BabelNodeInfo,
+    importedEntity: String,
+    importedAs: String
+  ): Unit = {
+    val impNode = createImportNode(impDecl, Some(importedEntity).filter(_.trim.nonEmpty), importedAs)
     methodAstParentStack.collectFirst { case namespaceBlockNode: NewNamespaceBlock =>
       diffGraph.addEdge(namespaceBlockNode, impNode, EdgeTypes.AST)
     }
