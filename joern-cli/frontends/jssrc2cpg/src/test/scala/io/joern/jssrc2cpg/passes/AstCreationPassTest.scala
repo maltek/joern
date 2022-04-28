@@ -276,11 +276,12 @@ class AstCreationPassTest extends AbstractPassTest {
     }
 
     "have correct structure for 1 object with simple values" in AstFixture("""
-                                                                             |var x = {
-                                                                             | key1: "value",
-                                                                             | key2: 2
-                                                                             |}
-                                                                             |""".stripMargin) { cpg =>
+       |var x = {
+       | key1: "value",
+       | key2: 2,
+       | ...rest
+       |}
+       |""".stripMargin) { cpg =>
       def method = cpg.method.nameExact(":program")
       method.checkNodeCount(1)
 
@@ -302,14 +303,16 @@ class AstCreationPassTest extends AbstractPassTest {
       def block = assignment.expandAst(NodeTypes.BLOCK)
       checkObjectInitialization(block.head, ("key1", "\"value\""))
       checkObjectInitialization(block.head, ("key2", "2"))
+      // TODO: SpreadElement is not handled yet. It is put there as UNKNOWN.
+      checkObjectInitialization(block.head, ("rest", "...rest"))
     }
 
     "have correct structure for 1 object with computed values" in AstFixture("""
-                                                                               |var x = {
-                                                                               | key1: value(),
-                                                                               | key2: foo.compute()
-                                                                               |}
-                                                                               |""".stripMargin) { cpg =>
+       |var x = {
+       | key1: value(),
+       | key2: foo.compute()
+       |}
+       |""".stripMargin) { cpg =>
       def method = cpg.method.nameExact(":program")
       method.checkNodeCount(1)
 
@@ -331,6 +334,35 @@ class AstCreationPassTest extends AbstractPassTest {
       def block = assignment.expandAst(NodeTypes.BLOCK)
       checkObjectInitialization(block.head, ("key1", "value()"))
       checkObjectInitialization(block.head, ("key2", "foo.compute()"))
+    }
+
+    "have correct structure for 1 object with object function" in AstFixture("""
+       |var x = {
+       | key1: value(),
+       | foo() {}
+       |}
+       |""".stripMargin) { cpg =>
+      def method = cpg.method.nameExact(":program")
+      method.checkNodeCount(1)
+
+      def methodBlock = method.expandAst(NodeTypes.BLOCK)
+      methodBlock.checkNodeCount(1)
+
+      def localX = methodBlock.expandAst(NodeTypes.LOCAL).filter(PropertyNames.NAME, "x")
+      localX.checkNodeCount(1)
+
+      def assignment = methodBlock.expandAst(NodeTypes.CALL)
+      assignment.checkNodeCount(1)
+
+      def identifierX = assignment.expandAst(NodeTypes.IDENTIFIER)
+      identifierX.checkNodeCount(1)
+
+      def localXViaRef = identifierX.expandRef(NodeTypes.LOCAL)
+      localXViaRef.head shouldBe localX.head
+
+      def block = assignment.expandAst(NodeTypes.BLOCK)
+      checkObjectInitialization(block.head, ("key1", "value()"))
+      checkObjectInitialization(block.head, ("foo", "foo")) // ref to foo
     }
 
     "have correct structure for object with computed property name" ignore AstFixture("""

@@ -131,6 +131,7 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
     case awaitExpr @ BabelNodeInfo(BabelAst.AwaitExpression)             => astForAwaitExpression(awaitExpr)
     case ternary @ BabelNodeInfo(BabelAst.ConditionalExpression)         => astForConditionalExpression(ternary)
     case templateExpr @ BabelNodeInfo(BabelAst.TaggedTemplateExpression) => astForTemplateExpression(templateExpr)
+    case objExpr @ BabelNodeInfo(BabelAst.ObjectExpression)              => astForObjectExpression(objExpr)
     case exprStmt @ BabelNodeInfo(BabelAst.ExpressionStatement)          => astForExpressionStatement(exprStmt)
     case ifStmt @ BabelNodeInfo(BabelAst.IfStatement)                    => astForIfStatement(ifStmt)
     case block @ BabelNodeInfo(BabelAst.BlockStatement)                  => astForBlockStatement(block)

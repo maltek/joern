@@ -419,4 +419,56 @@ trait AstForExpressionsCreator {
     callAst(templateExprCall, List(argumentAst))
   }
 
+  protected def astForObjectExpression(objExpr: BabelNodeInfo): Ast = {
+    val blockId = createBlockNode(objExpr.code, objExpr.lineNumber, objExpr.columnNumber)
+
+    scope.pushNewBlockScope(blockId)
+    localAstParentStack.push(blockId)
+
+    val tmpName = generateUnusedVariableName(usedVariableNames, Set.empty, "_tmp")
+    val localId = createLocalNode(tmpName, Defines.ANY.label)
+    diffGraph.addEdge(localAstParentStack.head, localId, EdgeTypes.AST)
+
+    val propertiesAsts = objExpr.json("properties").arr.toList.map { property =>
+      val propertyInfo = createBabelNodeInfo(property)
+      val (lhsId, rhsId) = propertyInfo match {
+        case objMethod @ BabelNodeInfo(BabelAst.ObjectMethod) =>
+          val keyName = objMethod.json("key")("name").str
+          val keyId   = createFieldIdentifierNode(keyName, objMethod.lineNumber, objMethod.columnNumber)
+          (keyId, astForFunctionDeclaration(objMethod, shouldCreateFunctionReference = true))
+        case objProperty @ BabelNodeInfo(BabelAst.ObjectProperty) =>
+          val keyName = code(objProperty.json("key"))
+          val keyId   = createFieldIdentifierNode(keyName, objProperty.lineNumber, objProperty.columnNumber)
+          (keyId, astForNode(objProperty.json("value")))
+        case spread @ BabelNodeInfo(BabelAst.SpreadElement) =>
+          val keyName = code(spread.json("argument"))
+          val keyId   = createFieldIdentifierNode(keyName, spread.lineNumber, spread.columnNumber)
+          (keyId, astForNode(spread.json))
+      }
+
+      val leftHandSideTmpId = createIdentifierNode(tmpName, propertyInfo)
+      val leftHandSideFieldAccessId =
+        createFieldAccess(leftHandSideTmpId, lhsId, propertyInfo.lineNumber, propertyInfo.columnNumber)
+
+      Ast.storeInDiffGraph(leftHandSideFieldAccessId, diffGraph)
+      Ast.storeInDiffGraph(rhsId, diffGraph)
+
+      val assignmentCallId = createAssignment(
+        leftHandSideFieldAccessId.nodes.head,
+        rhsId.nodes.head,
+        s"$tmpName.${lhsId.canonicalName} = ${codeOf(rhsId.nodes.head)}",
+        propertyInfo.lineNumber,
+        propertyInfo.columnNumber
+      )
+      assignmentCallId
+    }
+
+    val tmpId = createIdentifierNode(tmpName, objExpr)
+
+    scope.popScope()
+    localAstParentStack.pop()
+
+    setArgumentIndices(propertiesAsts)
+    Ast(blockId).withChildren(propertiesAsts).withChild(Ast(tmpId))
+  }
 }
