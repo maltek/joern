@@ -3,7 +3,6 @@ package io.joern.jssrc2cpg.passes
 import better.files.File
 import io.joern.jssrc2cpg.testfixtures.JsSrc2CpgFrontend
 import io.joern.x2cpg.layers.Base
-import io.joern.x2cpg.testfixtures.CodeToCpgFixture
 import io.shiftleft.codepropertygraph.Cpg
 import io.shiftleft.codepropertygraph.generated.{
   ControlStructureTypes,
