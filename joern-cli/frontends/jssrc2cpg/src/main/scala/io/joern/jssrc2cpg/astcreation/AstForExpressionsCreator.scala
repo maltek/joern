@@ -70,7 +70,7 @@ trait AstForExpressionsCreator {
           val base = createBabelNodeInfo(callee.json("object"))
           base.node match {
             case BabelAst.Identifier =>
-              val receiverAst = astForNode(callee.json)
+              val receiverAst = astForNodeWithFunctionReference(callee.json)
               Ast.storeInDiffGraph(receiverAst, diffGraph)
               val baseNode = createIdentifierNode(base.code, base).order(1).argumentIndex(1)
               scope.addVariableReference(base.code, baseNode)
@@ -80,7 +80,7 @@ trait AstForExpressionsCreator {
               val tmpVarName  = generateUnusedVariableName(usedVariableNames, Set.empty, "_tmp")
               val baseTmpNode = createIdentifierNode(tmpVarName, base)
               scope.addVariableReference(tmpVarName, baseTmpNode)
-              val baseAst = astForNode(base.json)
+              val baseAst = astForNodeWithFunctionReference(base.json)
               Ast.storeInDiffGraph(baseAst, diffGraph)
               val code = s"(${codeOf(baseTmpNode)} = ${base.code})"
               val tmpAssignmentAst =
@@ -98,7 +98,7 @@ trait AstForExpressionsCreator {
               (baseAst, Some(memberNode), fieldAccessAst, thisTmpNode)
           }
         case _ =>
-          val receiverAst = astForNode(callee.json)
+          val receiverAst = astForNodeWithFunctionReference(callee.json)
           Ast.storeInDiffGraph(receiverAst, diffGraph)
           val thisNode = createIdentifierNode("this", callee)
           scope.addVariableReference(thisNode.name, thisNode)
@@ -140,7 +140,7 @@ trait AstForExpressionsCreator {
 
     val tmpAllocNode2 = createIdentifierNode(tmpAllocName, newExpr)
 
-    val receiverNode = astForNode(callee)
+    val receiverNode = astForNodeWithFunctionReference(callee)
     Ast.storeInDiffGraph(receiverNode, diffGraph)
     val callNode = handleCallNodeArgs(newExpr, receiverNode.nodes.head, tmpAllocNode2, receiverNode.nodes.head, None)
 
@@ -154,7 +154,7 @@ trait AstForExpressionsCreator {
   }
 
   protected def astForMemberExpression(memberExpr: BabelNodeInfo): Ast = {
-    val baseAst = astForNode(memberExpr.json("object"))
+    val baseAst = astForNodeWithFunctionReference(memberExpr.json("object"))
     Ast.storeInDiffGraph(baseAst, diffGraph)
     val memberIsComputed = memberExpr.json("computed").bool
     val memberNodeInfo   = createBabelNodeInfo(memberExpr.json("property"))
