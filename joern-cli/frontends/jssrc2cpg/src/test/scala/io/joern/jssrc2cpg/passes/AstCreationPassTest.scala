@@ -4905,7 +4905,7 @@ class AstCreationPassTest extends AbstractPassTest {
     def apply(code: String)(f: Cpg => Unit): Unit = {
       File.usingTemporaryDirectory("jssrc2cpgTest") { dir =>
         val file = dir / "code.js"
-        file.write(CodeToCpgFixture.codeToSystemLinebreaks(code))
+        file.write(code)
         file.deleteOnExit()
         val cpg     = new JsSrc2CpgFrontend().execute(dir.toJava)
         val context = new LayerCreatorContext(cpg)

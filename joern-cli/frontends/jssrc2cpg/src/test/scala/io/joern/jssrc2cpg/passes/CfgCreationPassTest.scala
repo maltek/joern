@@ -1292,7 +1292,7 @@ class CfgCreationPassTest extends AnyWordSpec with Matchers {
 
     File.usingTemporaryDirectory("jssrc2cpgCfgTest") { workspace =>
       val file = workspace / "code.js"
-      file.write(CodeToCpgFixture.codeToSystemLinebreaks(code))
+      file.write(code)
       file.deleteOnExit()
       cpg = new JsSrc2CpgFrontend().execute(workspace.toJava)
       new CfgCreationPass(cpg).createAndApply()

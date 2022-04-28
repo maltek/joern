@@ -11,13 +11,11 @@ object BabelJsonParser {
   case class ParseResult(filename: String, fullPath: String, json: Value, fileContent: String)
 
   def readFile(rootPath: Path, file: Path): ParseResult = {
-    val jsonContent = IOUtils.readLinesInFile(file).mkString
-    val json        = ujson.read(jsonContent)
-    val filename    = json("relativeName").str
-    val fullPath    = Paths.get(rootPath.toString, filename)
-    val lines =
-      IOUtils.readLinesInFile(fullPath).flatMap(_.toCharArray.appendedAll(System.lineSeparator().toCharArray)).toArray
-    val sourceFileContent = lines.mkString
+    val jsonContent       = IOUtils.readLinesInFile(file).mkString
+    val json              = ujson.read(jsonContent)
+    val filename          = json("relativeName").str
+    val fullPath          = Paths.get(rootPath.toString, filename)
+    val sourceFileContent = IOUtils.readLinesInFile(fullPath).mkString
     ParseResult(filename, fullPath.toString, json, sourceFileContent)
   }
 

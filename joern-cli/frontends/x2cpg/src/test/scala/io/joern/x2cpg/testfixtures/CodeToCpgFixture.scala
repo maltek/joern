@@ -2,7 +2,6 @@ package io.joern.x2cpg.testfixtures
 
 import io.joern.x2cpg.X2Cpg
 import io.joern.x2cpg.X2Cpg.applyDefaultOverlays
-import io.joern.x2cpg.testfixtures.CodeToCpgFixture.codeToSystemLinebreaks
 import io.shiftleft.codepropertygraph.Cpg
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
@@ -23,7 +22,7 @@ class CodeToCpgFixture(val frontend: LanguageFrontend) extends AnyWordSpec with 
   }
 
   def writeCodeToFile(sourceCode: String): File = {
-    X2Cpg.writeCodeToFile(codeToSystemLinebreaks(sourceCode), "semanticcpgtest", frontend.fileSuffix)
+    X2Cpg.writeCodeToFile(sourceCode, "semanticcpgtest", frontend.fileSuffix)
   }
 
   private def buildCpgForDir[T](dir: File): Unit = {
@@ -35,17 +34,4 @@ class CodeToCpgFixture(val frontend: LanguageFrontend) extends AnyWordSpec with 
     cpg.close()
   }
 
-}
-
-object CodeToCpgFixture {
-  def codeToSystemLinebreaks(code: String): String =
-    if (code.matches("(?s).*(\\r\\n).*")) { // Windows
-      code.replace("\r\n", System.lineSeparator())
-    } else if (code.matches("(?s).*(\\n).*")) { // Unix/Linux
-      code.replace("\n", System.lineSeparator())
-    } else if (code.matches("(?s).*(\\r).*")) { // Legacy mac os 9. Newer OS X use \n
-      code.replace("\r", System.lineSeparator())
-    } else {
-      code // fallback if nothing matches.
-    }
 }
