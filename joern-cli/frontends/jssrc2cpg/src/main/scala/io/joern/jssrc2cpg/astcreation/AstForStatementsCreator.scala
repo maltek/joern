@@ -149,7 +149,7 @@ trait AstForStatementsCreator {
   private def astsForSwitchCase(switchCase: BabelNodeInfo): List[Ast] = {
     val labelAst = Ast(createJumpTarget(switchCase))
     val testAst = safeObj(switchCase.json, "test") match {
-      case Some(test) => astForNode(Obj(test))
+      case Some(test) => astForNodeWithFunctionReference(Obj(test))
       case None       => Ast()
     }
     val consequentAsts = astForNodes(switchCase.json("consequent").arr.toList)

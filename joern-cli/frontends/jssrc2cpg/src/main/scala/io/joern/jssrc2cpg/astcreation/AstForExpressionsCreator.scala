@@ -203,8 +203,8 @@ trait AstForExpressionsCreator {
 
   protected def astForConditionalExpression(ternary: BabelNodeInfo): Ast = {
     val testAst       = astForNode(ternary.json("test"))
-    val consequentAst = astForNode(ternary.json("consequent"))
-    val alternateAst  = astForNode(ternary.json("alternate"))
+    val consequentAst = astForNodeWithFunctionReference(ternary.json("consequent"))
+    val alternateAst  = astForNodeWithFunctionReference(ternary.json("alternate"))
     Ast.storeInDiffGraph(testAst, diffGraph)
     Ast.storeInDiffGraph(consequentAst, diffGraph)
     Ast.storeInDiffGraph(alternateAst, diffGraph)
@@ -397,7 +397,7 @@ trait AstForExpressionsCreator {
   }
 
   def astForTemplateExpression(templateExpr: BabelNodeInfo): Ast = {
-    val argumentAst = astForNode(templateExpr.json("quasi"))
+    val argumentAst = astForNodeWithFunctionReference(templateExpr.json("quasi"))
     val callName    = code(templateExpr.json("tag"))
     val callCode    = s"$callName(${codeOf(argumentAst.nodes.head)})"
     val templateExprCall =
@@ -437,6 +437,7 @@ trait AstForExpressionsCreator {
           val keyName = code(spread.json("argument"))
           val keyId   = createFieldIdentifierNode(keyName, spread.lineNumber, spread.columnNumber)
           (keyId, astForNode(spread.json))
+        case _ => ???
       }
 
       val leftHandSideTmpId = createIdentifierNode(tmpName, propertyInfo)

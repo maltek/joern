@@ -14,17 +14,20 @@ trait AstForTypesCreator {
 
   this: AstCreator =>
 
+  private def isConstructor(json: Value): Boolean =
+    hasKey(json, "kind") && json("kind").str == "constructor"
+
   private def classMembers(clazz: BabelNodeInfo, withConstructor: Boolean = true): Seq[Value] = {
     val allMembers = Try(clazz.json("body")("body").arr).toOption.toSeq.flatten
     if (withConstructor) {
       allMembers
     } else {
-      allMembers.filterNot(_("kind").str == "constructor")
+      allMembers.filterNot(isConstructor)
     }
   }
 
   private def classConstructor(clazz: BabelNodeInfo): Option[Value] =
-    classMembers(clazz).find(_("kind").str == "constructor")
+    classMembers(clazz).find(isConstructor)
 
   private def classConstructor(typeName: String, classExpr: BabelNodeInfo): NewMethod = {
     val maybeClassConstructor = classConstructor(classExpr)
