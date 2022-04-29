@@ -74,7 +74,7 @@ trait AstForDeclarationsCreator {
           astForNodeWithFunctionReference(initExpr.json)
       }
       val assigmentCallAst =
-        createAssignment(
+        createAssignmentCallAst(
           destAst.nodes.head,
           sourceAst.nodes.head,
           code(declarator),

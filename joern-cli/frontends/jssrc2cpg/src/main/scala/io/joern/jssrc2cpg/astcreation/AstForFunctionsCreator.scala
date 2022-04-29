@@ -34,7 +34,7 @@ trait AstForFunctionsCreator {
       scope.addVariable(methodName, idLocal, BlockScope)
       scope.addVariableReference(methodName, idNode)
       val code       = s"$methodName = ${func.code}"
-      val assignment = createAssignment(idNode, methodRefNode.get, code, func.lineNumber, func.columnNumber)
+      val assignment = createAssignmentCallAst(idNode, methodRefNode.get, code, func.lineNumber, func.columnNumber)
       assignment
     } else {
       Ast()
@@ -120,7 +120,7 @@ trait AstForFunctionsCreator {
       case BabelNodeInfo(BabelAst.ArrowFunctionExpression) => createBlockStatementAsts(Arr(block))
       case _                                               => createBlockStatementAsts(block("body"))
     }
-    setArgumentIndices(bodyStmtAsts)
+    setIndices(bodyStmtAsts)
 
     val methodReturnNode = createMethodReturnNode(func)
 
@@ -129,7 +129,7 @@ trait AstForFunctionsCreator {
     methodAstParentStack.pop()
 
     val functionTypeAndTypeDeclAst =
-      createFunctionTypeAndTypeDecl(
+      createFunctionTypeAndTypeDeclAst(
         methodNode,
         methodAstParentStack.head,
         methodName,

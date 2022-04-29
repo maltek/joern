@@ -13,6 +13,7 @@ import io.joern.jssrc2cpg.passes.Defines
 import io.joern.x2cpg.Ast
 import io.shiftleft.codepropertygraph.generated.nodes.NewNode
 import io.shiftleft.codepropertygraph.generated.EdgeTypes
+import io.shiftleft.codepropertygraph.generated.nodes.ExpressionNew
 import org.apache.commons.lang.StringUtils
 import ujson.Value
 
@@ -140,6 +141,15 @@ trait AstCreatorHelper {
     positionToFirstPositionInLine.put(position, firstPositionInLine)
 
     (positionToLineNumber, positionToFirstPositionInLine)
+  }
+
+  protected def setIndices(arguments: List[Ast]): Unit = {
+    withIndex(arguments) { case (a, i) =>
+      a.root.collect { case x: ExpressionNew =>
+        x.argumentIndex = i
+        x.order = i
+      }
+    }
   }
 
   private def computeScopePath(stack: Option[ScopeElement]): String =

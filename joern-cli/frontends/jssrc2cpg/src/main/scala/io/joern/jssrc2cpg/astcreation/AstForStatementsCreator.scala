@@ -31,7 +31,7 @@ trait AstForStatementsCreator {
     scope.pushNewBlockScope(blockNode)
     localAstParentStack.push(blockNode)
     val blockStatementAsts = createBlockStatementAsts(block.json("body"))
-    setArgumentIndices(blockStatementAsts)
+    setIndices(blockStatementAsts)
     localAstParentStack.pop()
     scope.popScope()
     Ast(blockNode).withChildren(blockStatementAsts)
@@ -42,7 +42,7 @@ trait AstForStatementsCreator {
     safeObj(ret.json, "argument")
       .map { argument =>
         val argAst = astForNode(Obj(argument))
-        returnAst(retNode, List(argAst))
+        createReturnAst(retNode, List(argAst))
       }
       .getOrElse(Ast(retNode))
   }
@@ -68,7 +68,7 @@ trait AstForStatementsCreator {
       .getOrElse(Ast())
 
     val tryChildren = List(bodyAst, catchAst, finalizerAst)
-    setArgumentIndices(tryChildren)
+    setIndices(tryChildren)
     Ast(tryNode).withChildren(tryChildren)
   }
 
@@ -82,7 +82,7 @@ trait AstForStatementsCreator {
       }
       .getOrElse(Ast())
     val ifChildren = List(testAst, consequentAst, alternateAst)
-    setArgumentIndices(ifChildren)
+    setIndices(ifChildren)
     Ast(ifNode)
       .withChild(testAst)
       .withConditionEdge(ifNode, testAst.nodes.head)
@@ -94,7 +94,7 @@ trait AstForStatementsCreator {
     val whileNode = createControlStructureNode(doWhileStmt, ControlStructureTypes.DO)
     val testAst   = astForNode(doWhileStmt.json("test"))
     val bodyAst   = astForNode(doWhileStmt.json("body"))
-    setArgumentIndices(List(bodyAst, testAst))
+    setIndices(List(bodyAst, testAst))
     Ast(whileNode).withChild(bodyAst).withChild(testAst).withConditionEdge(whileNode, testAst.nodes.head)
   }
 
@@ -102,7 +102,7 @@ trait AstForStatementsCreator {
     val whileNode = createControlStructureNode(whileStmt, ControlStructureTypes.WHILE)
     val testAst   = astForNode(whileStmt.json("test"))
     val bodyAst   = astForNode(whileStmt.json("body"))
-    setArgumentIndices(List(testAst, bodyAst))
+    setIndices(List(testAst, bodyAst))
     Ast(whileNode).withChild(testAst).withConditionEdge(whileNode, testAst.nodes.head).withChild(bodyAst)
   }
 
@@ -117,16 +117,14 @@ trait AstForStatementsCreator {
       .map { test =>
         astForNode(Obj(test))
       }
-      .getOrElse(
-        Ast(createLiteralNode("true", Some(Defines.BOOLEAN.label), forStmt.lineNumber, forStmt.columnNumber).order(2))
-      )
+      .getOrElse(Ast(createLiteralNode("true", Some(Defines.BOOLEAN.label), forStmt.lineNumber, forStmt.columnNumber)))
     val updateAst = safeObj(forStmt.json, "update")
       .map { update =>
         astForNode(Obj(update))
       }
       .getOrElse(Ast())
     val bodyAst = astForNode(forStmt.json("body"))
-    setArgumentIndices(List(initAst, testAst, updateAst, bodyAst))
+    setIndices(List(initAst, testAst, updateAst, bodyAst))
     Ast(forNode).withChild(initAst).withChild(testAst).withChild(updateAst).withChild(bodyAst)
   }
 
@@ -147,13 +145,10 @@ trait AstForStatementsCreator {
   }
 
   private def astsForSwitchCase(switchCase: BabelNodeInfo): List[Ast] = {
-    val labelAst = Ast(createJumpTarget(switchCase))
-    val testAst = safeObj(switchCase.json, "test") match {
-      case Some(test) => astForNodeWithFunctionReference(Obj(test))
-      case None       => Ast()
-    }
+    val labelAst       = Ast(createJumpTarget(switchCase))
+    val testAsts       = safeObj(switchCase.json, "test").map(t => astForNodeWithFunctionReference(Obj(t))).toList
     val consequentAsts = astForNodes(switchCase.json("consequent").arr.toList)
-    List(labelAst, testAst) ++ consequentAsts
+    labelAst +: (testAsts ++ consequentAsts)
   }
 
   protected def astForSwitchStatement(switchStmt: BabelNodeInfo): Ast = {
@@ -166,12 +161,12 @@ trait AstForStatementsCreator {
     localAstParentStack.push(blockId)
 
     val casesAsts = switchStmt.json("cases").arr.flatMap(c => astsForSwitchCase(createBabelNodeInfo(c)))
-    setArgumentIndices(casesAsts.toList)
+    setIndices(casesAsts.toList)
 
     scope.popScope()
     localAstParentStack.pop()
 
-    setArgumentIndices(List(switchExpressionAst, Ast(blockId)))
+    setIndices(List(switchExpressionAst, Ast(blockId)))
     Ast(switchNode)
       .withChild(switchExpressionAst)
       .withConditionEdge(switchNode, switchExpressionAst.nodes.head)
@@ -237,7 +232,7 @@ trait AstForStatementsCreator {
     val indexMemberNode = createFieldIdentifierNode("iterator", forInOfStmt.lineNumber, forInOfStmt.columnNumber)
 
     val indexAccessNode =
-      createFieldAccess(indexBaseNode, indexMemberNode, forInOfStmt.lineNumber, forInOfStmt.columnNumber)
+      createFieldAccessCallAst(indexBaseNode, indexMemberNode, forInOfStmt.lineNumber, forInOfStmt.columnNumber)
 
     val indexCallAst = callAst(indexCallNode, List(objectKeysCallAst, indexAccessNode))
 
@@ -306,7 +301,7 @@ trait AstForStatementsCreator {
     val nextMemberNode = createFieldIdentifierNode("next", forInOfStmt.lineNumber, forInOfStmt.columnNumber)
 
     val nextReceiverNode =
-      createFieldAccess(nextBaseNode, nextMemberNode, forInOfStmt.lineNumber, forInOfStmt.columnNumber)
+      createFieldAccessCallAst(nextBaseNode, nextMemberNode, forInOfStmt.lineNumber, forInOfStmt.columnNumber)
 
     val thisNextNode = createIdentifierNode(iteratorName, forInOfStmt)
 
@@ -317,7 +312,8 @@ trait AstForStatementsCreator {
 
     val doneMemberNode = createFieldIdentifierNode("done", forInOfStmt.lineNumber, forInOfStmt.columnNumber)
 
-    val testNode = createFieldAccess(doneBaseNode, doneMemberNode, forInOfStmt.lineNumber, forInOfStmt.columnNumber)
+    val testNode =
+      createFieldAccessCallAst(doneBaseNode, doneMemberNode, forInOfStmt.lineNumber, forInOfStmt.columnNumber)
 
     val testCallAst = callAst(testCallNode, List(testNode))
 
@@ -330,7 +326,7 @@ trait AstForStatementsCreator {
 
     val memberNode = createFieldIdentifierNode("value", forInOfStmt.lineNumber, forInOfStmt.columnNumber)
 
-    val accessAst = createFieldAccess(baseNode, memberNode, forInOfStmt.lineNumber, forInOfStmt.columnNumber)
+    val accessAst = createFieldAccessCallAst(baseNode, memberNode, forInOfStmt.lineNumber, forInOfStmt.columnNumber)
 
     val loopVariableAssignmentNode = createCallNode(
       loopVariableName + " = " + resultName + ".value",

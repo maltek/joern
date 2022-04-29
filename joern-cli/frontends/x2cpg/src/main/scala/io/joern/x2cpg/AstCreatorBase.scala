@@ -10,7 +10,6 @@ import io.shiftleft.codepropertygraph.generated.nodes.{
   NewMethodReturn,
   NewNamespaceBlock
 }
-import io.shiftleft.codepropertygraph.generated.nodes.NewReturn
 import io.shiftleft.semanticcpg.language.types.structure.NamespaceTraversal
 import overflowdb.BatchedUpdate.DiffGraphBuilder
 
@@ -67,6 +66,7 @@ abstract class AstCreatorBase(filename: String) {
     * main purpose of this method is to automatically assign the correct argument indices.
     */
   def callAst(callNode: NewCall, arguments: List[Ast] = List(), receiver: Option[Ast] = None): Ast = {
+
     val receiverRoot = receiver.flatMap(_.root).toList
     val rcv          = receiver.getOrElse(Ast())
     receiverRoot match {
@@ -83,14 +83,7 @@ abstract class AstCreatorBase(filename: String) {
       .withReceiverEdges(callNode, receiverRoot)
   }
 
-  def returnAst(returnNode: NewReturn, arguments: List[Ast] = List()): Ast = {
-    setArgumentIndices(arguments)
-    Ast(returnNode)
-      .withChildren(arguments)
-      .withArgEdges(returnNode, arguments.flatMap(_.root))
-  }
-
-  protected def setArgumentIndices(arguments: List[Ast]): Unit = {
+  private def setArgumentIndices(arguments: List[Ast]) = {
     withIndex(arguments) { case (a, i) =>
       a.root.collect { case x: ExpressionNew =>
         x.argumentIndex = i

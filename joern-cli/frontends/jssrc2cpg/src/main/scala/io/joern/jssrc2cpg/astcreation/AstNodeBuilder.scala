@@ -60,7 +60,7 @@ trait AstNodeBuilder {
 
   protected def createReturnNode(ret: BabelNodeInfo): NewReturn =
     NewReturn()
-      .code(ret.code)
+      .code(ret.code.stripSuffix(";"))
       .lineNumber(ret.lineNumber)
       .columnNumber(ret.columnNumber)
 
@@ -74,6 +74,13 @@ trait AstNodeBuilder {
       .typeFullName(Defines.ANY.label)
       .lineNumber(line)
       .columnNumber(column)
+  }
+
+  protected def createReturnAst(returnNode: NewReturn, arguments: List[Ast] = List()): Ast = {
+    setIndices(arguments)
+    Ast(returnNode)
+      .withChildren(arguments)
+      .withArgEdges(returnNode, arguments.flatMap(_.root))
   }
 
   protected def createJumpTarget(switchCase: BabelNodeInfo): NewJumpTarget = {
@@ -176,7 +183,7 @@ trait AstNodeBuilder {
     case _             => ""
   }
 
-  protected def createFieldAccess(
+  protected def createFieldAccessCallAst(
     baseNode: NewNode,
     partNode: NewNode,
     line: Option[Integer] = None,
@@ -192,7 +199,7 @@ trait AstNodeBuilder {
     callAst(callNode, List(Ast(baseNode), Ast(partNode)))
   }
 
-  protected def createTernary(
+  protected def createTernaryCallAst(
     testNode: NewNode,
     trueNode: NewNode,
     falseNode: NewNode,
@@ -242,7 +249,7 @@ trait AstNodeBuilder {
       .columnNumber(column)
       .dynamicTypeHintFullName(dynamicTypeOption.toList)
 
-  protected def createAssignment(
+  protected def createAssignmentCallAst(
     destId: NewNode,
     sourceId: NewNode,
     code: String,
@@ -317,7 +324,7 @@ trait AstNodeBuilder {
       .lineNumber(line)
       .columnNumber(column)
 
-  protected def createFunctionTypeAndTypeDecl(
+  protected def createFunctionTypeAndTypeDeclAst(
     methodNode: NewMethod,
     parentNode: NewNode,
     methodName: String,
@@ -338,6 +345,7 @@ trait AstNodeBuilder {
         astParentType = astParentType,
         astParentFullName = astParentFullName
       ).inheritsFromTypeFullName(List(Defines.ANY.label))
+
     // Problem for https://github.com/ShiftLeftSecurity/codescience/issues/3626 here.
     // As the type (thus, the signature) of the function node is unknown (i.e., ANY*)
     // we can't generate the correct binding with signature.

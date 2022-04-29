@@ -84,11 +84,16 @@ trait AstForExpressionsCreator {
               Ast.storeInDiffGraph(baseAst, diffGraph)
               val code = s"(${codeOf(baseTmpNode)} = ${base.code})"
               val tmpAssignmentAst =
-                createAssignment(baseTmpNode, baseAst.nodes.head, code, base.lineNumber, base.columnNumber)
+                createAssignmentCallAst(baseTmpNode, baseAst.nodes.head, code, base.lineNumber, base.columnNumber)
               val member     = createBabelNodeInfo(callee.json("property"))
               val memberNode = createFieldIdentifierNode(member.code, member.lineNumber, member.columnNumber)
               val fieldAccessAst =
-                createFieldAccess(tmpAssignmentAst.nodes.head, memberNode, callee.lineNumber, callee.columnNumber)
+                createFieldAccessCallAst(
+                  tmpAssignmentAst.nodes.head,
+                  memberNode,
+                  callee.lineNumber,
+                  callee.columnNumber
+                )
               val thisTmpNode = createIdentifierNode(tmpVarName, callee)
               scope.addVariableReference(tmpVarName, thisTmpNode)
 
@@ -130,7 +135,7 @@ trait AstForExpressionsCreator {
       createCallNode(".alloc", Operators.alloc, DispatchTypes.STATIC_DISPATCH, newExpr.lineNumber, newExpr.columnNumber)
 
     val assignmentTmpAllocCallNode =
-      createAssignment(
+      createAssignmentCallAst(
         tmpAllocNode1,
         allocCallNode,
         s"$tmpAllocName = ${allocCallNode.code}",
@@ -149,7 +154,7 @@ trait AstForExpressionsCreator {
     scope.popScope()
     localAstParentStack.pop()
 
-    setArgumentIndices(List(assignmentTmpAllocCallNode, callNode, tmpAllocReturnNode))
+    setIndices(List(assignmentTmpAllocCallNode, callNode, tmpAllocReturnNode))
     Ast(blockNode).withChild(assignmentTmpAllocCallNode).withChild(callNode).withChild(tmpAllocReturnNode)
   }
 
@@ -166,7 +171,12 @@ trait AstForExpressionsCreator {
       }
     Ast.storeInDiffGraph(memberNode, diffGraph)
     val accessAst =
-      createFieldAccess(baseAst.nodes.head, memberNode.nodes.head, memberExpr.lineNumber, memberExpr.columnNumber)
+      createFieldAccessCallAst(
+        baseAst.nodes.head,
+        memberNode.nodes.head,
+        memberExpr.lineNumber,
+        memberExpr.columnNumber
+      )
     accessAst
   }
 
@@ -208,7 +218,7 @@ trait AstForExpressionsCreator {
     Ast.storeInDiffGraph(testAst, diffGraph)
     Ast.storeInDiffGraph(consequentAst, diffGraph)
     Ast.storeInDiffGraph(alternateAst, diffGraph)
-    createTernary(testAst.nodes.head, consequentAst.nodes.head, alternateAst.nodes.head)
+    createTernaryCallAst(testAst.nodes.head, consequentAst.nodes.head, alternateAst.nodes.head)
   }
 
   protected def astForBinaryExpression(binExpr: BabelNodeInfo): Ast = {
@@ -302,7 +312,7 @@ trait AstForExpressionsCreator {
     scope.pushNewBlockScope(blockNode)
     localAstParentStack.push(blockNode)
     val sequenceExpressionAsts = createBlockStatementAsts(seq.json("expressions"))
-    setArgumentIndices(sequenceExpressionAsts)
+    setIndices(sequenceExpressionAsts)
     localAstParentStack.pop()
     scope.popScope()
     Ast(blockNode).withChildren(sequenceExpressionAsts)
@@ -355,7 +365,7 @@ trait AstForExpressionsCreator {
 
       val assignmentCode = s"${localTmpNode.code} = ${arrayCallNode.code}"
       val assignmentTmpArrayCallNode =
-        createAssignment(tmpArrayNode, arrayCallNode, assignmentCode, lineNumber, columnNumber)
+        createAssignmentCallAst(tmpArrayNode, arrayCallNode, assignmentCode, lineNumber, columnNumber)
       Ast.storeInDiffGraph(assignmentTmpArrayCallNode, diffGraph)
       diffGraph.addEdge(blockNode, assignmentTmpArrayCallNode.nodes.head, EdgeTypes.AST)
 
@@ -379,7 +389,7 @@ trait AstForExpressionsCreator {
 
           val baseNode     = createIdentifierNode(tmpName, elementNodeInfo)
           val memberNode   = createFieldIdentifierNode("push", elementLineNumber, elementColumnNumber)
-          val receiverNode = createFieldAccess(baseNode, memberNode, elementLineNumber, elementColumnNumber)
+          val receiverNode = createFieldAccessCallAst(baseNode, memberNode, elementLineNumber, elementColumnNumber)
           val thisPushNode = createIdentifierNode(tmpName, elementNodeInfo)
 
           val callNode = callAst(pushCallNode, List(Ast(thisPushNode), elementNode), Some(receiverNode))
@@ -445,12 +455,12 @@ trait AstForExpressionsCreator {
 
       val leftHandSideTmpId = createIdentifierNode(tmpName, propertyInfo)
       val leftHandSideFieldAccessId =
-        createFieldAccess(leftHandSideTmpId, lhsId, propertyInfo.lineNumber, propertyInfo.columnNumber)
+        createFieldAccessCallAst(leftHandSideTmpId, lhsId, propertyInfo.lineNumber, propertyInfo.columnNumber)
 
       Ast.storeInDiffGraph(leftHandSideFieldAccessId, diffGraph)
       Ast.storeInDiffGraph(rhsId, diffGraph)
 
-      val assignmentCallId = createAssignment(
+      val assignmentCallId = createAssignmentCallAst(
         leftHandSideFieldAccessId.nodes.head,
         rhsId.nodes.head,
         s"$tmpName.${lhsId.canonicalName} = ${codeOf(rhsId.nodes.head)}",
@@ -465,7 +475,7 @@ trait AstForExpressionsCreator {
     scope.popScope()
     localAstParentStack.pop()
 
-    setArgumentIndices(propertiesAsts)
+    setIndices(propertiesAsts)
     Ast(blockId).withChildren(propertiesAsts).withChild(Ast(tmpId))
   }
 }

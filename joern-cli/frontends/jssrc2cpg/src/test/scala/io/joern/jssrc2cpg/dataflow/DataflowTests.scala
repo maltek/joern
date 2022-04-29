@@ -311,7 +311,7 @@ class JSDataFlowTest11 extends DataFlowCodeToCpgSuite {
       |    var a = 37;
       |    var b = a;
       |    var z = b;
-      |    z+=a;
+      |    z += a;
       | }
        """.stripMargin
 
@@ -491,7 +491,7 @@ class JSDataFlowTest17 extends DataFlowCodeToCpgSuite {
 class JSDataFlowTest18 extends DataFlowCodeToCpgSuite {
   override val code: String =
     """
-      | var s { 'field' : 0 };
+      | var s = { 'field' : 0 };
       |
       | function foo(arg) {
       |   arg.field = source();

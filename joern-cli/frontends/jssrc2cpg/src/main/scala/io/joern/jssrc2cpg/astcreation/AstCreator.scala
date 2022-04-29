@@ -98,7 +98,7 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
     val thisParam = createParameterInNode("this", "this", 0, isVariadic = false, lineNumber, columnNumber)
 
     val methodChildren = astsForFile(astNodeInfo)
-    setArgumentIndices(methodChildren)
+    setIndices(methodChildren)
 
     val methodReturn = NewMethodReturn()
       .code("RET")
@@ -110,7 +110,7 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
     methodAstParentStack.pop()
 
     val functionTypeAndTypeDeclAst =
-      createFunctionTypeAndTypeDecl(programMethod, methodAstParentStack.head, name, fullName, path)
+      createFunctionTypeAndTypeDeclAst(programMethod, methodAstParentStack.head, name, fullName, path)
     Ast.storeInDiffGraph(functionTypeAndTypeDeclAst, diffGraph)
 
     methodAst(programMethod, List(thisParam), Ast(blockNode).withChildren(methodChildren), methodReturn)
