@@ -257,9 +257,12 @@ trait AstForExpressionsCreator {
   }
 
   protected def astForUpdateExpression(updateExpr: BabelNodeInfo): Ast = {
+    val isPrefix = updateExpr.json("prefix").bool
     val op = updateExpr.json("operator").str match {
-      case "++" => Operators.preIncrement
-      case "--" => Operators.preDecrement
+      case "++" if isPrefix => Operators.preIncrement
+      case "++"             => Operators.postIncrement
+      case "--" if isPrefix => Operators.preIncrement
+      case "--"             => Operators.postIncrement
       case other =>
         logger.warn(s"Unknown update operator: '$other'")
         Operators.assignment

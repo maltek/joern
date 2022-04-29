@@ -47,6 +47,11 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
   protected val functionFullNames             = mutable.HashSet.empty[String]
   protected val usedVariableNames             = mutable.HashMap.empty[String, Int]
 
+  // we track line and column numbers manually because astgen / @babel-parser sometimes
+  // fails to deliver them at all -  strange, but this even happens with its latest version
+  protected val (positionToLineNumberMapping, positionToFirstPositionInLineMapping) =
+    positionLookupTables(parserResult.fileContent)
+
   // we want to keep it local, just like the old js2cpg did
   override def absolutePath(filename: String): String = filename
 
@@ -146,6 +151,7 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
     case throwStmt @ BabelNodeInfo(BabelAst.ThrowStatement)              => astForThrowStatement(throwStmt)
     case forInStmt @ BabelNodeInfo(BabelAst.ForInStatement)              => astForInOfStatement(forInStmt)
     case forOfStmt @ BabelNodeInfo(BabelAst.ForOfStatement)              => astForInOfStatement(forOfStmt)
+    case emptyStmt @ BabelNodeInfo(BabelAst.EmptyStatement)              => Ast()
     case ident @ BabelNodeInfo(BabelAst.Identifier)                      => astForIdentifier(ident)
     case stringLiteral @ BabelNodeInfo(BabelAst.StringLiteral)           => astForStringLiteral(stringLiteral)
     case numLiteral @ BabelNodeInfo(BabelAst.NumericLiteral)             => astForNumericLiteral(numLiteral)

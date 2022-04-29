@@ -17,12 +17,17 @@ import org.apache.commons.lang.StringUtils
 import ujson.Value
 
 import scala.collection.mutable
+import scala.collection.SortedMap
 import scala.util.Success
 import scala.util.Try
 
 trait AstCreatorHelper {
 
   this: AstCreator =>
+
+  // maximum length of code fields in number of characters
+  private val MAX_CODE_LENGTH: Int = 1000
+  private val MIN_CODE_LENGTH: Int = 50
 
   protected def createBabelNodeInfo(json: Value): BabelNodeInfo = {
     val c     = shortenCode(code(json))
@@ -73,15 +78,8 @@ trait AstCreatorHelper {
     currentVariableName
   }
 
-  protected def code(node: Value): String = {
-    val start = Try(node("start").num.toInt).getOrElse(0)
-    val end   = Try(node("end").num.toInt).getOrElse(0)
-    parserResult.fileContent.substring(start, end).trim
-  }
-
-  // maximum length of re-mapped code fields after transpilation in number of characters
-  private val MAX_CODE_LENGTH: Int = 1000
-  private val MIN_CODE_LENGTH: Int = 50
+  protected def code(node: Value): String =
+    parserResult.fileContent.substring(start(node).getOrElse(0), end(node).getOrElse(0)).trim
 
   private def shortenCode(code: String, length: Int = MAX_CODE_LENGTH): String =
     StringUtils.abbreviate(code, math.max(MIN_CODE_LENGTH, length))
@@ -95,17 +93,53 @@ trait AstCreatorHelper {
     case _                                => None
   }
 
-  protected def columnEnd(node: Value): Option[Integer] =
-    safeObj(node, "loc").flatMap(loc => safeObj(loc, "end").flatMap(start => start("column").numOpt.map(_.toInt)))
+  private def start(node: Value): Option[Int] = Try(node("start").num.toInt).toOption
 
-  protected def column(node: Value): Option[Integer] =
-    safeObj(node, "loc").flatMap(loc => safeObj(loc, "start").flatMap(start => start("column").numOpt.map(_.toInt)))
+  private def end(node: Value): Option[Int] = Try(node("end").num.toInt).toOption
 
-  protected def lineEnd(node: Value): Option[Integer] =
-    safeObj(node, "loc").flatMap(loc => safeObj(loc, "end").flatMap(start => start("line").numOpt.map(_.toInt)))
+  protected def line(node: Value): Option[Integer] = start(node).map(getLineOfSource)
 
-  protected def line(node: Value): Option[Integer] = {
-    safeObj(node, "loc").flatMap(loc => safeObj(loc, "start").flatMap(start => start("line").numOpt.map(_.toInt)))
+  protected def lineEnd(node: Value): Option[Integer] = end(node).map(getLineOfSource)
+
+  protected def column(node: Value): Option[Integer] = start(node).map(getColumnOfSource)
+
+  protected def columnEnd(node: Value): Option[Integer] = end(node).map(getColumnOfSource)
+
+  // Returns the line number for a given position in the source.
+  private def getLineOfSource(position: Int): Int = {
+    val (_, lineNumber) = positionToLineNumberMapping.minAfter(position).get
+    lineNumber
+  }
+
+  // Returns the column number for a given position in the source.
+  private def getColumnOfSource(position: Int): Int = {
+    val (_, firstPositionInLine) = positionToFirstPositionInLineMapping.minAfter(position).get
+    position - firstPositionInLine
+  }
+
+  protected def positionLookupTables(source: String): (SortedMap[Int, Int], SortedMap[Int, Int]) = {
+    val positionToLineNumber, positionToFirstPositionInLine = mutable.TreeMap.empty[Int, Int]
+
+    val data                = source.toCharArray
+    var lineNumber          = 1
+    var firstPositionInLine = 0
+    var position            = 0
+
+    while (position < data.length) {
+      val isNewLine = data(position) == '\n'
+      if (isNewLine) {
+        positionToLineNumber.put(position, lineNumber)
+        lineNumber += 1
+        positionToFirstPositionInLine.put(position, firstPositionInLine)
+        firstPositionInLine = position + 1
+      }
+      position += 1
+    }
+
+    positionToLineNumber.put(position, lineNumber)
+    positionToFirstPositionInLine.put(position, firstPositionInLine)
+
+    (positionToLineNumber, positionToFirstPositionInLine)
   }
 
   private def computeScopePath(stack: Option[ScopeElement]): String =
