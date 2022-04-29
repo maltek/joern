@@ -151,7 +151,7 @@ class AstCreator(val config: Config, val parserResult: ParseResult, val global: 
     case throwStmt @ BabelNodeInfo(BabelAst.ThrowStatement)              => astForThrowStatement(throwStmt)
     case forInStmt @ BabelNodeInfo(BabelAst.ForInStatement)              => astForInOfStatement(forInStmt)
     case forOfStmt @ BabelNodeInfo(BabelAst.ForOfStatement)              => astForInOfStatement(forOfStmt)
-    case emptyStmt @ BabelNodeInfo(BabelAst.EmptyStatement)              => Ast()
+    case BabelNodeInfo(BabelAst.EmptyStatement)                          => Ast()
     case ident @ BabelNodeInfo(BabelAst.Identifier)                      => astForIdentifier(ident)
     case stringLiteral @ BabelNodeInfo(BabelAst.StringLiteral)           => astForStringLiteral(stringLiteral)
     case numLiteral @ BabelNodeInfo(BabelAst.NumericLiteral)             => astForNumericLiteral(numLiteral)
