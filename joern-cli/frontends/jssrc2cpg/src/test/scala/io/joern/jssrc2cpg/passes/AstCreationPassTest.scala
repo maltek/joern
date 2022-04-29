@@ -2,7 +2,6 @@ package io.joern.jssrc2cpg.passes
 
 import better.files.File
 import io.joern.jssrc2cpg.testfixtures.JsSrc2CpgFrontend
-import io.joern.x2cpg.layers.Base
 import io.shiftleft.codepropertygraph.Cpg
 import io.shiftleft.codepropertygraph.generated.{
   ControlStructureTypes,
@@ -17,7 +16,6 @@ import io.shiftleft.codepropertygraph.generated.{
 import io.shiftleft.codepropertygraph.generated.nodes.Import
 import io.shiftleft.codepropertygraph.generated.nodes.NamespaceBlock
 import io.shiftleft.semanticcpg.language._
-import io.shiftleft.semanticcpg.layers.LayerCreatorContext
 import overflowdb.Node
 import overflowdb.traversal.Traversal
 

@@ -47,7 +47,7 @@ class JSDataFlowTest1 extends DataFlowCodeToCpgSuite {
       |     if (mode == 5) sz = -5;
       |
       |     read(fd, buff, sz);
-      | };
+      | }
       """.stripMargin
 
   "Flow from function call read to multiple versions of the same variable" in {
@@ -77,14 +77,14 @@ class JSDataFlowTest1 extends DataFlowCodeToCpgSuite {
 class JSDataFlowTest2 extends DataFlowCodeToCpgSuite {
   override val code: String =
     """
-      | function foo(x) {};
+      | function foo(x) {}
       |
       | function method(y){
       |  var a = 10;
       |  if (a < y){
       |    foo(a);
       |  };
-      | };
+      | }
       """.stripMargin
 
   "Flow from function call argument" in {
@@ -102,13 +102,13 @@ class JSDataFlowTest3 extends DataFlowCodeToCpgSuite {
     """
       | function flow() {
       |   var a = 0x37;
-      |   var b=a;
-      |   var c=0x31;
+      |   var b = a;
+      |   var c = 0x31;
       |   var z = b + c;
       |   z++;
       |   var p = z;
       |   var x = z;
-      | };
+      | }
       """.stripMargin
 
   "Flow chains from x to a" in {
@@ -355,7 +355,7 @@ class JSDataFlowTest13 extends DataFlowCodeToCpgSuite {
       |    var y = x;
       |    var z = y;
       |    return 0;
-      | };
+      | }
       """.stripMargin
 
   "Flow from array method parameter to identifier" in {
@@ -393,11 +393,11 @@ class JSDataFlowTest15 extends DataFlowCodeToCpgSuite {
     |function bar() {
     |  var x = source();
     |  foo(x);
-    |};
+    |}
     |
     |function foo(y) {
     |  sink(y);
-    |};""".stripMargin
+    |}""".stripMargin
 
   "Flow for source in caller" in {
     def source = cpg.call.code("source.*")
@@ -414,14 +414,14 @@ class JSDataFlowTest16 extends DataFlowCodeToCpgSuite {
   override val code: String = """
     |function bar() {
     |  return source();
-    |};
+    |}
     |
-    |function sink(param) {};
+    |function sink(param) {}
     |
     |function foo(y) {
     |  var y = bar();
     |  sink(y);
-    |};""".stripMargin
+    |}""".stripMargin
 
   "Flow for source in callee" in {
     def source = cpg.call.code("source.*")
@@ -458,22 +458,22 @@ class JSDataFlowTest17 extends DataFlowCodeToCpgSuite {
       | var point = {
       |   'x' : 0,
       |   'y' : 0
-      | };
+      | }
       |
       | function source() {
       |   return 2.0;
-      | };
+      | }
       |
       | function sink(x) {
       |   return 3;
-      | };
+      | }
       |
       | function main() {
       |   var k = source();
       |   point.x = k;
       |   point.y = 2;
       |   sink(point.x);
-      | };
+      | }
       |""".stripMargin
 
   "Flow for struct data" in {
@@ -491,7 +491,7 @@ class JSDataFlowTest17 extends DataFlowCodeToCpgSuite {
 class JSDataFlowTest18 extends DataFlowCodeToCpgSuite {
   override val code: String =
     """
-      | var s = { 'field' : 0 };
+      | var s = { 'field' : 0 }
       |
       | function foo(arg) {
       |   arg.field = source();
@@ -535,7 +535,7 @@ class JSDataFlowTest20 extends DataFlowCodeToCpgSuite {
       |function foo(y, x) {
       |  free(y);
       |  free(x);
-      |};
+      |}
       |""".stripMargin
 
   "Flows for statements to METHOD_RETURN" in {
@@ -553,7 +553,7 @@ class JSDataFlowTest21 extends DataFlowCodeToCpgSuite {
     """
       | function foo() {
       |   return bar();
-      | };
+      | }
     """.stripMargin
 
   "Should not create edges from call to ret twice" in {
@@ -569,7 +569,7 @@ class JSDataFlowTest22 extends DataFlowCodeToCpgSuite {
     """
        | function f(x, y) {
        |   g(x, y);
-       | };""".stripMargin
+       | }""".stripMargin
 
   "Flow from outer params to inner params" in {
     def source = cpg.method(".*f").parameter
