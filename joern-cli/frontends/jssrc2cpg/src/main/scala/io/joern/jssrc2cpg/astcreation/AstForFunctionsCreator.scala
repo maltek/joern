@@ -13,6 +13,7 @@ import io.shiftleft.codepropertygraph.generated.nodes.NewMethod
 import io.shiftleft.codepropertygraph.generated.nodes.NewMethodParameterIn
 import io.shiftleft.codepropertygraph.generated.nodes.NewModifier
 import io.shiftleft.codepropertygraph.generated.DispatchTypes
+import io.shiftleft.codepropertygraph.generated.nodes.MethodParameterIn.PropertyDefaults
 import ujson.Arr
 import ujson.Value
 
@@ -72,15 +73,27 @@ trait AstForFunctionsCreator {
         }
         arrParams.flatten
       case assignmentPattern @ BabelNodeInfo(BabelAst.AssignmentPattern) =>
-        val key     = code(assignmentPattern.json("left"))
-        val localId = createLocalNode(key, Defines.ANY.label)
-        diffGraph.addEdge(localAstParentStack.head, localId, EdgeTypes.AST)
-        val subTreeAst    = convertDestructingParamWithDefault(assignmentPattern, key)
+        val subTreeAst = createBabelNodeInfo(assignmentPattern.json("left")) match {
+          case objPattern @ BabelNodeInfo(BabelAst.ObjectPattern) =>
+            val rhsAst = astForNodeWithFunctionReference(assignmentPattern.json("right"))
+            astForDeconstruction(objPattern, rhsAst)
+          case arrPattern @ BabelNodeInfo(BabelAst.ArrayPattern) =>
+            val rhsAst = astForNodeWithFunctionReference(assignmentPattern.json("right"))
+            astForDeconstruction(arrPattern, rhsAst)
+          case _ =>
+            val key     = code(assignmentPattern.json("left"))
+            val localId = createLocalNode(key, Defines.ANY.label)
+            diffGraph.addEdge(localAstParentStack.head, localId, EdgeTypes.AST)
+            convertDestructingParamWithDefault(assignmentPattern, key)
+        }
         val blockChildren = List(subTreeAst)
         setIndices(blockChildren)
         additionalBlockStatements.addAll(blockChildren)
         val params = handleParameters(Seq(assignmentPattern.json("left")), additionalBlockStatements)
-        params.flatten.map(_.index(index))
+        params.flatten.map {
+          case param if param.index == PropertyDefaults.Index => param.index(index)
+          case param                                          => param
+        }
       case other =>
         Seq(
           createParameterInNode(other.code, other.code, index, isVariadic = false, other.lineNumber, other.columnNumber)
@@ -91,10 +104,17 @@ trait AstForFunctionsCreator {
   private def convertDestructingParamWithDefault(element: BabelNodeInfo, key: String): Ast = {
     val lhsElement = element.json("left")
     val rhsElement = element.json("right")
-    val lhsId      = astForNode(lhsElement)
-    Ast.storeInDiffGraph(lhsId, diffGraph)
+
     val rhsId = astForNodeWithFunctionReference(rhsElement)
     Ast.storeInDiffGraph(rhsId, diffGraph)
+
+    val lhsId = createBabelNodeInfo(lhsElement) match {
+      case objPattern @ BabelNodeInfo(BabelAst.ObjectPattern) => astForDeconstruction(objPattern, rhsId)
+      case arrPattern @ BabelNodeInfo(BabelAst.ArrayPattern)  => astForDeconstruction(arrPattern, rhsId)
+      case _                                                  => astForNode(lhsElement)
+    }
+    Ast.storeInDiffGraph(lhsId, diffGraph)
+
     val testId = {
       val keyId = createIdentifierNode(key, element)
       val voidCallId = createCallNode(
