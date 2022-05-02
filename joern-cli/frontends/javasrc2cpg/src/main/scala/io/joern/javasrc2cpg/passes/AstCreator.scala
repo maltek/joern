@@ -2,127 +2,22 @@ package io.joern.javasrc2cpg.passes
 
 import com.github.javaparser.ast.`type`.TypeParameter
 import com.github.javaparser.ast.{CompilationUnit, Node, NodeList, PackageDeclaration}
-import com.github.javaparser.ast.body.{
-  BodyDeclaration,
-  CallableDeclaration,
-  ConstructorDeclaration,
-  EnumConstantDeclaration,
-  FieldDeclaration,
-  InitializerDeclaration,
-  MethodDeclaration,
-  Parameter,
-  TypeDeclaration,
-  VariableDeclarator
-}
+import com.github.javaparser.ast.body.{BodyDeclaration, CallableDeclaration, ConstructorDeclaration, EnumConstantDeclaration, FieldDeclaration, InitializerDeclaration, MethodDeclaration, Parameter, TypeDeclaration, VariableDeclarator}
 import com.github.javaparser.ast.expr.AssignExpr.Operator
-import com.github.javaparser.ast.expr.{
-  AnnotationExpr,
-  ArrayAccessExpr,
-  ArrayCreationExpr,
-  ArrayInitializerExpr,
-  AssignExpr,
-  BinaryExpr,
-  BooleanLiteralExpr,
-  CastExpr,
-  CharLiteralExpr,
-  ClassExpr,
-  ConditionalExpr,
-  DoubleLiteralExpr,
-  EnclosedExpr,
-  Expression,
-  FieldAccessExpr,
-  InstanceOfExpr,
-  IntegerLiteralExpr,
-  LambdaExpr,
-  LiteralExpr,
-  LongLiteralExpr,
-  MarkerAnnotationExpr,
-  MethodCallExpr,
-  NameExpr,
-  NormalAnnotationExpr,
-  NullLiteralExpr,
-  ObjectCreationExpr,
-  SingleMemberAnnotationExpr,
-  StringLiteralExpr,
-  SuperExpr,
-  TextBlockLiteralExpr,
-  ThisExpr,
-  UnaryExpr,
-  VariableDeclarationExpr
-}
-import com.github.javaparser.ast.stmt.{
-  AssertStmt,
-  BlockStmt,
-  BreakStmt,
-  CatchClause,
-  ContinueStmt,
-  DoStmt,
-  EmptyStmt,
-  ExplicitConstructorInvocationStmt,
-  ExpressionStmt,
-  ForEachStmt,
-  ForStmt,
-  IfStmt,
-  LabeledStmt,
-  ReturnStmt,
-  Statement,
-  SwitchEntry,
-  SwitchStmt,
-  SynchronizedStmt,
-  ThrowStmt,
-  TryStmt,
-  WhileStmt
-}
+import com.github.javaparser.ast.expr.{AnnotationExpr, ArrayAccessExpr, ArrayCreationExpr, ArrayInitializerExpr, AssignExpr, BinaryExpr, BooleanLiteralExpr, CastExpr, CharLiteralExpr, ClassExpr, ConditionalExpr, DoubleLiteralExpr, EnclosedExpr, Expression, FieldAccessExpr, InstanceOfExpr, IntegerLiteralExpr, LambdaExpr, LiteralExpr, LongLiteralExpr, MarkerAnnotationExpr, MethodCallExpr, NameExpr, NormalAnnotationExpr, NullLiteralExpr, ObjectCreationExpr, SingleMemberAnnotationExpr, StringLiteralExpr, SuperExpr, TextBlockLiteralExpr, ThisExpr, UnaryExpr, VariableDeclarationExpr}
+import com.github.javaparser.ast.stmt.{AssertStmt, BlockStmt, BreakStmt, CatchClause, ContinueStmt, DoStmt, EmptyStmt, ExplicitConstructorInvocationStmt, ExpressionStmt, ForEachStmt, ForStmt, IfStmt, LabeledStmt, ReturnStmt, Statement, SwitchEntry, SwitchStmt, SynchronizedStmt, ThrowStmt, TryStmt, WhileStmt}
 import com.github.javaparser.resolution.UnsolvedSymbolException
-import com.github.javaparser.resolution.declarations.{
-  ResolvedConstructorDeclaration,
-  ResolvedMethodDeclaration,
-  ResolvedMethodLikeDeclaration,
-  ResolvedReferenceTypeDeclaration
-}
-import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserFieldDeclaration
+import com.github.javaparser.resolution.declarations.{ResolvedClassDeclaration, ResolvedConstructorDeclaration, ResolvedInterfaceDeclaration, ResolvedMethodDeclaration, ResolvedMethodLikeDeclaration, ResolvedReferenceTypeDeclaration, ResolvedTypeParameterDeclaration}
+import com.github.javaparser.resolution.types.parametrization.ResolvedTypeParametersMap
+import com.github.javaparser.resolution.types.{ResolvedReferenceType, ResolvedTypeVariable}
+import com.github.javaparser.symbolsolver.javaparsermodel.declarations.{JavaParserClassDeclaration, JavaParserFieldDeclaration}
 import io.joern.javasrc2cpg.passes.AstWithCtx.astWithCtxToSeq
 import io.joern.javasrc2cpg.passes.Context.mergedCtx
 import io.joern.javasrc2cpg.util.Scope.WildcardImportName
 import io.joern.javasrc2cpg.util.{NodeTypeInfo, Scope, TypeInfoProvider}
 import io.joern.javasrc2cpg.util.TypeInfoProvider.{TypeConstants, UnresolvedTypeDefault}
-import io.shiftleft.codepropertygraph.generated.{
-  ControlStructureTypes,
-  DispatchTypes,
-  EdgeTypes,
-  EvaluationStrategies,
-  ModifierTypes,
-  Operators,
-  PropertyNames
-}
-import io.shiftleft.codepropertygraph.generated.nodes.{
-  NewAnnotation,
-  NewAnnotationLiteral,
-  NewAnnotationParameter,
-  NewAnnotationParameterAssign,
-  NewArrayInitializer,
-  NewBinding,
-  NewBlock,
-  NewCall,
-  NewClosureBinding,
-  NewControlStructure,
-  NewFieldIdentifier,
-  NewIdentifier,
-  NewJumpTarget,
-  NewLiteral,
-  NewLocal,
-  NewMember,
-  NewMethod,
-  NewMethodParameterIn,
-  NewMethodRef,
-  NewModifier,
-  NewNamespaceBlock,
-  NewNode,
-  NewReturn,
-  NewTypeDecl,
-  NewTypeRef,
-  NewUnknown
-}
+import io.shiftleft.codepropertygraph.generated.{ControlStructureTypes, DispatchTypes, EdgeTypes, EvaluationStrategies, ModifierTypes, Operators, PropertyNames}
+import io.shiftleft.codepropertygraph.generated.nodes.{NewAnnotation, NewAnnotationLiteral, NewAnnotationParameter, NewAnnotationParameterAssign, NewArrayInitializer, NewBinding, NewBlock, NewCall, NewClosureBinding, NewControlStructure, NewFieldIdentifier, NewIdentifier, NewJumpTarget, NewLiteral, NewLocal, NewMember, NewMethod, NewMethodParameterIn, NewMethodRef, NewModifier, NewNamespaceBlock, NewNode, NewReturn, NewTypeDecl, NewTypeRef, NewUnknown}
 import io.joern.x2cpg.{Ast, AstCreatorBase}
 import io.joern.x2cpg.datastructures.Global
 import org.slf4j.LoggerFactory
@@ -357,9 +252,81 @@ class AstCreator(filename: String, javaParserAst: CompilationUnit, global: Globa
     }
   }
 
+  private def referenceTypeMethods(referenceType: ResolvedReferenceType): Unit = {
+
+  }
+
+  private def methodSignature(method: ResolvedMethodDeclaration,
+                              typeParameters: ResolvedTypeParametersMap): String = {
+    val parameterTypes =
+      Range(0, method.getNumberOfParams).map(method.getParam).map { param =>
+        param.getType match {
+          case typeVariable: ResolvedTypeVariable =>
+            val value = typeParameters.getValue(typeVariable.asTypeParameter())
+            value.describe()
+          case typ =>
+            typ.describe()
+        }
+      }
+
+    val returnType = method.getReturnType match {
+      case typeVariable: ResolvedTypeVariable =>
+        val value = typeParameters.getValue(typeVariable.asTypeParameter())
+        value.describe()
+      case typ =>
+        typ.describe()
+    }
+
+    s"$returnType(${parameterTypes.mkString(",")})"
+  }
+
+  private def methodSignatureErased(method: ResolvedMethodDeclaration,
+                              typeParameters: collection.Seq[ResolvedTypeParameterDeclaration]): String = {
+    val parameterTypes =
+      Range(0, method.getNumberOfParams).map(method.getParam).map { param =>
+        param.getType match {
+          case typeVariable: ResolvedTypeVariable =>
+            val typeParam = typeParameters.find(_.getQualifiedName == typeVariable.qualifiedName()).get
+            typeParam.getBounds.asScala.find(_.isExtends).get.getType.describe()
+          case typ =>
+            typ.describe()
+        }
+      }
+
+    val returnType = method.getReturnType match {
+      case typeVariable: ResolvedTypeVariable =>
+        val typeParam = typeParameters.find(_.getQualifiedName == typeVariable.qualifiedName()).get
+        typeParam.getUpperBound.describe()
+      case typ =>
+        typ.describe()
+    }
+
+    s"$returnType(${parameterTypes.mkString(",")})"
+  }
+
+  private def foo(method: MethodDeclaration): Unit = {
+    val resolvedMethod = method.resolve()
+    val declType = resolvedMethod.declaringType()
+    val origMethodErasedSig = methodSignatureErased(resolvedMethod, Nil)
+
+    val interfaces = declType.getAllAncestors()
+    interfaces.asScala.foreach { interface =>
+      val typeParameters = interface.typeParametersMap()
+      val interfaceType = interface.getTypeDeclaration.get
+      interfaceType.getDeclaredMethods.asScala.foreach { ancestorMethod =>
+        val sig = methodSignature(ancestorMethod, typeParameters)
+        if (ancestorMethod.getName == resolvedMethod.getName && sig == origMethodErasedSig) {
+          val erasedSig = methodSignatureErased(ancestorMethod,interfaceType.getTypeParameters.asScala)
+          println(erasedSig)
+        }
+        sig
+      }
+    }
+  }
+
   private def astForTypeDeclMember(
-    member: BodyDeclaration[_],
-    order: Int,
+                                    member: BodyDeclaration[_],
+                                    order: Int,
     clinitOrder: Int,
     astParentFullName: String
   ): AstWithStaticInit = {
@@ -374,6 +341,7 @@ class AstCreator(filename: String, javaParserAst: CompilationUnit, global: Globa
         val AstWithCtx(ast, ctx) = astForMethod(method, order)
         val rootNode             = Try(ast.root.get.asInstanceOf[NewMethod]).toOption
         val bindingInfo          = bindingForMethod(rootNode)
+        foo(method)
         AstWithStaticInit(AstWithCtx(ast, ctx.addBindings(bindingInfo)))
 
       case typeDeclaration: TypeDeclaration[_] =>
