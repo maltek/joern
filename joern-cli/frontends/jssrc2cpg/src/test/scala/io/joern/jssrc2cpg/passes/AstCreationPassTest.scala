@@ -3719,21 +3719,17 @@ class AstCreationPassTest extends AbstractPassTest {
       def userId = cpg.method.nameExact("userId")
       userId.checkNodeCount(1)
 
-      def param =
-        userId.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "param1_0")
-      param.checkNodeCount(1)
-
       def userIdBlock = userId.expandAst(NodeTypes.BLOCK)
       userIdBlock.checkNodeCount(1)
 
       def idLocal = userIdBlock.expandAst(NodeTypes.LOCAL).filter(PropertyNames.NAME, "id")
       idLocal.checkNodeCount(1)
 
-      def assignmentToId =
-        userIdBlock
-          .expandAst(NodeTypes.CALL)
-          .filter(PropertyNames.CODE, "id = param1_0.id")
-      assignmentToId.checkNodeCount(1)
+      def param =
+        userId.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "id")
+      param.checkNodeCount(1)
+      param.checkProperty(PropertyNames.CODE, "id")
+      param.checkProperty(PropertyNames.INDEX, 1)
     }
 
     "have correct structure for method spread argument" ignore AstFixture("foo(...args)") { _ => }

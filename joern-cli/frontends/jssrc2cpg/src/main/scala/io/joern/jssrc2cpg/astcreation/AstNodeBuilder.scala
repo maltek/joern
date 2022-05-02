@@ -183,6 +183,24 @@ trait AstNodeBuilder {
     case _             => ""
   }
 
+  protected def createIndexAccessCallAst(
+    baseNode: NewNode,
+    partNode: NewNode,
+    line: Option[Integer] = None,
+    column: Option[Integer] = None
+  ): Ast = {
+    val callNode = createCallNode(
+      s"${codeOf(baseNode)}[${codeOf(partNode)}]",
+      Operators.indexAccess,
+      DispatchTypes.STATIC_DISPATCH,
+      line,
+      column
+    )
+    val arguments = List(Ast(baseNode), Ast(partNode))
+    setIndices(arguments)
+    callAst(callNode, arguments)
+  }
+
   protected def createFieldAccessCallAst(
     baseNode: NewNode,
     partNode: NewNode,

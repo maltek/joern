@@ -158,7 +158,82 @@ trait AstForDeclarationsCreator {
     )
   }
 
-  protected def convertDestructingObjectElementWithDefault(
+  private def convertDestructingArrayElement(element: BabelNodeInfo, index: Int, localTmpName: String): Ast = {
+    val valueId = astForNode(element.json)
+    Ast.storeInDiffGraph(valueId, diffGraph)
+    val fieldAccessTmpId = createIdentifierNode(localTmpName, element)
+    val keyId = createLiteralNode(index.toString, Some(Defines.NUMBER.label), element.lineNumber, element.columnNumber)
+    val accessId = createIndexAccessCallAst(fieldAccessTmpId, keyId, element.lineNumber, element.columnNumber)
+    Ast.storeInDiffGraph(accessId, diffGraph)
+    createAssignmentCallAst(
+      valueId.nodes.head,
+      accessId.nodes.head,
+      s"${codeOf(valueId.nodes.head)} = ${codeOf(accessId.nodes.head)}",
+      element.lineNumber,
+      element.columnNumber
+    )
+  }
+
+  private def convertDestructingArrayElementWithDefault(
+    element: BabelNodeInfo,
+    index: Int,
+    localTmpName: String
+  ): Ast = {
+    val lhsElement = element.json("left")
+    val rhsElement = element.json("right")
+    val lhsId      = astForNode(lhsElement)
+    Ast.storeInDiffGraph(lhsId, diffGraph)
+    val rhsId = astForNodeWithFunctionReference(rhsElement)
+    Ast.storeInDiffGraph(rhsId, diffGraph)
+    val testId = {
+      val fieldAccessTmpId = createIdentifierNode(localTmpName, element)
+      val keyId =
+        createLiteralNode(index.toString, Some(Defines.NUMBER.label), element.lineNumber, element.columnNumber)
+      val accessId =
+        createIndexAccessCallAst(fieldAccessTmpId, keyId, element.lineNumber, element.columnNumber)
+      Ast.storeInDiffGraph(accessId, diffGraph)
+      val voidCallId = createCallNode(
+        "void 0",
+        "<operator>.void",
+        DispatchTypes.STATIC_DISPATCH,
+        element.lineNumber,
+        element.columnNumber
+      )
+      val equalsCallId =
+        createEqualsCallAst(accessId.nodes.head, voidCallId, element.lineNumber, element.columnNumber)
+      equalsCallId
+    }
+    Ast.storeInDiffGraph(testId, diffGraph)
+    val falseId = {
+      val fieldAccessTmpId = createIdentifierNode(localTmpName, element)
+      val keyId =
+        createLiteralNode(index.toString, Some(Defines.NUMBER.label), element.lineNumber, element.columnNumber)
+      val accessId =
+        createIndexAccessCallAst(fieldAccessTmpId, keyId, element.lineNumber, element.columnNumber)
+      accessId
+    }
+    Ast.storeInDiffGraph(falseId, diffGraph)
+    val ternaryNodeId =
+      createTernaryCallAst(
+        testId.nodes.head,
+        rhsId.nodes.head,
+        falseId.nodes.head,
+        element.lineNumber,
+        element.columnNumber
+      )
+    Ast.storeInDiffGraph(ternaryNodeId, diffGraph)
+    val assignmentCallId =
+      createAssignmentCallAst(
+        lhsId.nodes.head,
+        ternaryNodeId.nodes.head,
+        s"${codeOf(lhsId.nodes.head)} = ${codeOf(ternaryNodeId.nodes.head)}",
+        element.lineNumber,
+        element.columnNumber
+      )
+    assignmentCallId
+  }
+
+  private def convertDestructingObjectElementWithDefault(
     element: BabelNodeInfo,
     key: String,
     localTmpName: String
@@ -252,13 +327,16 @@ trait AstForDeclarationsCreator {
           }
         }
       case BabelNodeInfo(BabelAst.ArrayPattern) =>
-        pattern.json("elements").arr.toList.zipWithIndex.map { case (element, index) =>
-          createBabelNodeInfo(element("value")) match {
-            case BabelNodeInfo(BabelAst.Identifier) => ??? // convertDestructingArrayElement(element, index)
-            case BabelNodeInfo(BabelAst.AssignmentPattern) =>
-              ??? //  convertDestructingArrayElementWithDefault(element, index)
-            case other => astForNode(other.json)
-          }
+        pattern.json("elements").arr.toList.zipWithIndex.map {
+          case (element, index) if !element.isNull =>
+            createBabelNodeInfo(element) match {
+              case ident @ BabelNodeInfo(BabelAst.Identifier) =>
+                convertDestructingArrayElement(ident, index, localTmpName)
+              case assignment @ BabelNodeInfo(BabelAst.AssignmentPattern) =>
+                convertDestructingArrayElementWithDefault(assignment, index, localTmpName)
+              case other => astForNode(other.json)
+            }
+          case _ => Ast()
         }
     }
 
