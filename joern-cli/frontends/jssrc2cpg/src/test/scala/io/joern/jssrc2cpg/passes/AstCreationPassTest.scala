@@ -3187,15 +3187,15 @@ class AstCreationPassTest extends AbstractPassTest {
       fooMethod.checkNodeCount(1)
 
       def a =
-        fooMethod.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "param1_0")
+        fooMethod.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "a")
       a.checkNodeCount(1)
-      a.checkProperty(PropertyNames.CODE, "{a}")
-      a.checkProperty(PropertyNames.ORDER, 1)
+      a.checkProperty(PropertyNames.CODE, "a")
+      a.checkProperty(PropertyNames.INDEX, 1)
 
       def b = fooMethod.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "b")
       b.checkNodeCount(1)
       b.checkProperty(PropertyNames.CODE, "b")
-      b.checkProperty(PropertyNames.ORDER, 2)
+      b.checkProperty(PropertyNames.INDEX, 2)
     }
 
     "have correct structure for object destruction assignment in call argument" in AstFixture("foo({a, b} = x)") {
@@ -3328,10 +3328,16 @@ class AstCreationPassTest extends AbstractPassTest {
       def userId = cpg.method.nameExact("userId")
       userId.checkNodeCount(1)
 
-      def param =
-        userId.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "param1_0")
-      param.checkNodeCount(1)
-      param.checkProperty(PropertyNames.CODE, "{id, b}")
+      def param1 =
+        userId.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "id")
+      param1.checkNodeCount(1)
+      param1.checkProperty(PropertyNames.CODE, "id = {}")
+      param1.checkProperty(PropertyNames.INDEX, 1)
+      def param2 =
+        userId.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "b")
+      param2.checkNodeCount(1)
+      param2.checkProperty(PropertyNames.CODE, "b")
+      param2.checkProperty(PropertyNames.INDEX, 2)
 
       def userIdBlock = userId.expandAst(NodeTypes.BLOCK)
       userIdBlock.checkNodeCount(1)
@@ -3340,25 +3346,25 @@ class AstCreationPassTest extends AbstractPassTest {
       destructionBlock.checkNodeCount(1)
 
       def localTmp =
-        destructionBlock.expandAst(NodeTypes.LOCAL).filter(PropertyNames.NAME, "_tmp_0")
+        destructionBlock.expandAst(NodeTypes.LOCAL).filter(PropertyNames.NAME, "_tmp_1")
       localTmp.checkNodeCount(1)
 
       def assignmentToTmp =
         destructionBlock
           .expandAst(NodeTypes.CALL)
-          .filter(PropertyNames.CODE, "_tmp_0 = param1_0 === void 0 ? {} : param1_0")
+          .filter(PropertyNames.CODE, "_tmp_1 = {}")
       assignmentToTmp.checkNodeCount(1)
 
       def assignmentToId =
         destructionBlock
           .expandAst(NodeTypes.CALL)
-          .filter(PropertyNames.CODE, "id = _tmp_0.id === void 0 ? {} : _tmp_0.id")
+          .filter(PropertyNames.CODE, "id = _tmp_1.id === void 0 ? {} : _tmp_1.id")
       assignmentToId.checkNodeCount(1)
 
       def assignmentToB =
         destructionBlock
           .expandAst(NodeTypes.CALL)
-          .filter(PropertyNames.CODE, "b = _tmp_0.b")
+          .filter(PropertyNames.CODE, "b = _tmp_1.b")
       assignmentToB.checkNodeCount(1)
 
       def id = assignmentToId.expandAst(NodeTypes.IDENTIFIER)
@@ -3367,15 +3373,15 @@ class AstCreationPassTest extends AbstractPassTest {
       def ternaryId =
         assignmentToId
           .expandAst(NodeTypes.CALL)
-          .filter(PropertyNames.CODE, "_tmp_0.id === void 0 ? {} : _tmp_0.id")
+          .filter(PropertyNames.CODE, "_tmp_1.id === void 0 ? {} : _tmp_1.id")
       ternaryId.checkNodeCount(1)
 
       def indexAccessId =
-        ternaryId.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "_tmp_0.id")
+        ternaryId.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "_tmp_1.id")
       indexAccessId.checkNodeCount(1)
 
       def leftId =
-        indexAccessId.expandAst(NodeTypes.IDENTIFIER).filter(PropertyNames.NAME, "_tmp_0")
+        indexAccessId.expandAst(NodeTypes.IDENTIFIER).filter(PropertyNames.NAME, "_tmp_1")
       leftId.checkNodeCount(1)
       def rightId =
         indexAccessId
@@ -3385,7 +3391,7 @@ class AstCreationPassTest extends AbstractPassTest {
 
       def tmpReturnIdentifier = destructionBlock.expandAst(NodeTypes.IDENTIFIER)
       tmpReturnIdentifier.checkNodeCount(1)
-      tmpReturnIdentifier.checkProperty(PropertyNames.NAME, "_tmp_0")
+      tmpReturnIdentifier.checkProperty(PropertyNames.NAME, "_tmp_1")
     }
 
     "have correct structure for object destruction assignment as parameter" in AstFixture("""
@@ -3402,24 +3408,11 @@ class AstCreationPassTest extends AbstractPassTest {
       def idLocal = userIdBlock.expandAst(NodeTypes.LOCAL).filter(PropertyNames.NAME, "id")
       idLocal.checkNodeCount(1)
 
-      def assignmentToId =
-        userIdBlock.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "id = param1_0.id")
-      assignmentToId.checkNodeCount(1)
-      def id = assignmentToId.expandAst(NodeTypes.IDENTIFIER)
-      id.checkNodeCount(1)
-
-      def indexAccessId =
-        assignmentToId.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "param1_0.id")
-      indexAccessId.checkNodeCount(1)
-
-      def leftId =
-        indexAccessId.expandAst(NodeTypes.IDENTIFIER).filter(PropertyNames.NAME, "param1_0")
-      leftId.checkNodeCount(1)
-      def rightId =
-        indexAccessId
-          .expandAst(NodeTypes.FIELD_IDENTIFIER)
-          .filter(PropertyNames.CANONICAL_NAME, "id")
-      rightId.checkNodeCount(1)
+      def param =
+        userId.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "id")
+      param.checkNodeCount(1)
+      param.checkProperty(PropertyNames.CODE, "id")
+      param.checkProperty(PropertyNames.INDEX, 1)
     }
 
     "have correct structure for array destruction assignment with declaration" in AstFixture("var [a, b] = x") { cpg =>

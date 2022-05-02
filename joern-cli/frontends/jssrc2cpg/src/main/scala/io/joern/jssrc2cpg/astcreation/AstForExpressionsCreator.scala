@@ -203,12 +203,28 @@ trait AstForExpressionsCreator {
         Operators.assignment
     }
 
-    val lhsAst = astForNode(assignment.json("left"))
-    val rhsAst = astForNodeWithFunctionReference(assignment.json("right"))
-
-    val callNode =
-      createCallNode(assignment.code, op, DispatchTypes.STATIC_DISPATCH, assignment.lineNumber, assignment.columnNumber)
-    callAst(callNode, List(lhsAst, rhsAst))
+    createBabelNodeInfo(assignment.json("left")) match {
+      case objPattern @ BabelNodeInfo(BabelAst.ObjectPattern) =>
+        val rhsAst = astForNodeWithFunctionReference(assignment.json("right"))
+        Ast.storeInDiffGraph(rhsAst, diffGraph)
+        astForDeconstruction(objPattern, rhsAst)
+      case arrPattern @ BabelNodeInfo(BabelAst.ArrayPattern) =>
+        val rhsAst = astForNodeWithFunctionReference(assignment.json("right"))
+        Ast.storeInDiffGraph(rhsAst, diffGraph)
+        astForDeconstruction(arrPattern, rhsAst)
+      case _ =>
+        val lhsAst = astForNode(assignment.json("left"))
+        val rhsAst = astForNodeWithFunctionReference(assignment.json("right"))
+        val callNode =
+          createCallNode(
+            assignment.code,
+            op,
+            DispatchTypes.STATIC_DISPATCH,
+            assignment.lineNumber,
+            assignment.columnNumber
+          )
+        callAst(callNode, List(lhsAst, rhsAst))
+    }
   }
 
   protected def astForConditionalExpression(ternary: BabelNodeInfo): Ast = {

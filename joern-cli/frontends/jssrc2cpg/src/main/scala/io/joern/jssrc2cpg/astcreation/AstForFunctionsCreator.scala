@@ -10,12 +10,73 @@ import io.shiftleft.codepropertygraph.generated.EdgeTypes
 import io.shiftleft.codepropertygraph.generated.ModifierTypes
 import io.shiftleft.codepropertygraph.generated.nodes.NewBlock
 import io.shiftleft.codepropertygraph.generated.nodes.NewMethod
+import io.shiftleft.codepropertygraph.generated.nodes.NewMethodParameterIn
 import io.shiftleft.codepropertygraph.generated.nodes.NewModifier
 import ujson.Arr
+import ujson.Value
+
+import scala.collection.mutable
 
 trait AstForFunctionsCreator {
 
   this: AstCreator =>
+
+  private def handleParameters(
+    parameters: Seq[Value],
+    additionalBlockStatements: mutable.ArrayBuffer[Ast]
+  ): Seq[Seq[NewMethodParameterIn]] = withIndex(parameters) { (param, index) =>
+    createBabelNodeInfo(param) match {
+      case rest @ BabelNodeInfo(BabelAst.RestElement) =>
+        val paramName = rest.code.replace("...", "")
+        val localId   = createLocalNode(paramName, Defines.ANY.label)
+        diffGraph.addEdge(localAstParentStack.head, localId, EdgeTypes.AST)
+        Seq(createParameterInNode(paramName, rest.code, index, isVariadic = true, rest.lineNumber, rest.columnNumber))
+      case obj @ BabelNodeInfo(BabelAst.ObjectPattern) =>
+        val objParams = obj.json("properties").arr.toSeq.collect {
+          case objParam if !objParam.isNull =>
+            val objParamInfo = createBabelNodeInfo(objParam)
+            val paramName    = code(objParamInfo.json("key"))
+            val localId      = createLocalNode(paramName, Defines.ANY.label)
+            diffGraph.addEdge(localAstParentStack.head, localId, EdgeTypes.AST)
+            createParameterInNode(
+              paramName,
+              objParamInfo.code,
+              index,
+              isVariadic = false,
+              objParamInfo.lineNumber,
+              objParamInfo.columnNumber
+            )
+        }
+        objParams.zipWithIndex.map { case (p, i) => p.index(i + 1) }
+      case arr @ BabelNodeInfo(BabelAst.ArrayPattern) =>
+        val arrParams = arr.json("elements").arr.toSeq.collect {
+          case arrParam if !arrParam.isNull =>
+            val arrParamInfo = createBabelNodeInfo(arrParam)
+            val paramName    = arrParamInfo.code
+            val localId      = createLocalNode(paramName, Defines.ANY.label)
+            diffGraph.addEdge(localAstParentStack.head, localId, EdgeTypes.AST)
+            createParameterInNode(
+              paramName,
+              arrParamInfo.code,
+              index,
+              isVariadic = false,
+              arrParamInfo.lineNumber,
+              arrParamInfo.columnNumber
+            )
+        }
+        arrParams.zipWithIndex.map { case (p, i) => p.index(i + 1) }
+      case assignmentPattern @ BabelNodeInfo(BabelAst.AssignmentPattern) =>
+        val lhsInfo = createBabelNodeInfo(assignmentPattern.json("left"))
+        val rhsAst  = astForNodeWithFunctionReference(assignmentPattern.json("right"))
+        val params  = handleParameters(Seq(assignmentPattern.json("left")), additionalBlockStatements)
+        additionalBlockStatements.addOne(astForDeconstruction(lhsInfo, rhsAst))
+        params.flatten
+      case other =>
+        Seq(
+          createParameterInNode(other.code, other.code, index, isVariadic = false, other.lineNumber, other.columnNumber)
+        )
+    }
+  }
 
   protected def createMethodAstAndNode(
     func: BabelNodeInfo,
@@ -54,6 +115,8 @@ trait AstForFunctionsCreator {
       .code(blockCode)
       .lineNumber(blockLineNumber)
       .columnNumber(blockColumnNumber)
+    val blockAst                  = Ast(blockNode)
+    val additionalBlockStatements = mutable.ArrayBuffer.empty[Ast]
 
     val capturingRefNode =
       if (shouldCreateFunctionReference) {
@@ -62,65 +125,18 @@ trait AstForFunctionsCreator {
         metaTypeRefIdStack.headOption
       }
     scope.pushNewMethodScope(methodFullName, methodName, blockNode, capturingRefNode)
+    localAstParentStack.push(blockNode)
 
     val thisNode =
       createParameterInNode("this", "this", 0, isVariadic = false, line = func.lineNumber, column = func.columnNumber)
 
-    val paramNodes = withIndex(func.json("params").arr.toSeq) { (param, index) =>
-      createBabelNodeInfo(param) match {
-        case rest @ BabelNodeInfo(BabelAst.RestElement) =>
-          Seq(
-            Some(
-              createParameterInNode(
-                rest.code.replace("...", ""),
-                rest.code,
-                index,
-                isVariadic = true,
-                rest.lineNumber,
-                rest.columnNumber
-              )
-            )
-          )
-        case arr @ BabelNodeInfo(BabelAst.ArrayPattern) =>
-          val arrParams = withIndex(arr.json("elements").arr.toSeq) {
-            case (arrParam, index) if !arrParam.isNull =>
-              val arrParamInfo = createBabelNodeInfo(arrParam)
-              Some(
-                createParameterInNode(
-                  arrParamInfo.code,
-                  arrParamInfo.code,
-                  index,
-                  isVariadic = false,
-                  arrParamInfo.lineNumber,
-                  arrParamInfo.columnNumber
-                )
-              )
-            case _ => None // skip null values
-          }
-          arrParams
-        case other =>
-          Seq(
-            Some(
-              createParameterInNode(
-                other.code,
-                other.code,
-                index,
-                isVariadic = false,
-                other.lineNumber,
-                other.columnNumber
-              )
-            )
-          )
-      }
-    }.flatten
-
-    localAstParentStack.push(blockNode)
+    val paramNodes = handleParameters(func.json("params").arr.toSeq, additionalBlockStatements)
 
     val bodyStmtAsts = func match {
       case BabelNodeInfo(BabelAst.ArrowFunctionExpression) => createBlockStatementAsts(Arr(block))
       case _                                               => createBlockStatementAsts(block("body"))
     }
-    setIndices(bodyStmtAsts)
+    setIndices(additionalBlockStatements.toList ++ bodyStmtAsts)
 
     val methodReturnNode = createMethodReturnNode(func)
 
@@ -138,7 +154,12 @@ trait AstForFunctionsCreator {
       )
 
     val mAst =
-      methodAst(methodNode, thisNode +: paramNodes.flatten, Ast(blockNode).withChildren(bodyStmtAsts), methodReturnNode)
+      methodAst(
+        methodNode,
+        thisNode +: paramNodes.flatten,
+        blockAst.withChildren(additionalBlockStatements ++ bodyStmtAsts),
+        methodReturnNode
+      )
         .withChild(Ast(virtualModifierNode))
 
     Ast.storeInDiffGraph(mAst, diffGraph)

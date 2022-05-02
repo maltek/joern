@@ -253,6 +253,19 @@ trait AstNodeBuilder {
       .columnNumber(column)
       .dynamicTypeHintFullName(dynamicTypeOption.toList)
 
+  protected def createEqualsCallAst(
+    destId: NewNode,
+    sourceId: NewNode,
+    line: Option[Integer] = None,
+    column: Option[Integer] = None
+  ): Ast = {
+    val code      = codeOf(destId) + " === " + codeOf(sourceId)
+    val callNode  = createCallNode(code, Operators.equals, DispatchTypes.STATIC_DISPATCH, line, column)
+    val arguments = List(Ast(destId), Ast(sourceId))
+    setIndices(arguments)
+    callAst(callNode, arguments)
+  }
+
   protected def createAssignmentCallAst(
     destId: NewNode,
     sourceId: NewNode,
