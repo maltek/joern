@@ -4233,7 +4233,7 @@ class AstCreationPassTest extends AbstractPassTest {
 
       def paramA = foo.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "a")
       paramA.checkNodeCount(1)
-      paramA.checkProperty(PropertyNames.ORDER, 1)
+      paramA.checkProperty(PropertyNames.INDEX, 1)
 
       def block = foo.expandAst(NodeTypes.BLOCK)
       block.checkNodeCount(1)
@@ -4274,11 +4274,11 @@ class AstCreationPassTest extends AbstractPassTest {
 
       def paramA = foo.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "a")
       paramA.checkNodeCount(1)
-      paramA.checkProperty(PropertyNames.ORDER, 1)
+      paramA.checkProperty(PropertyNames.INDEX, 1)
 
       def paramB = foo.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "b")
       paramB.checkNodeCount(1)
-      paramB.checkProperty(PropertyNames.ORDER, 2)
+      paramB.checkProperty(PropertyNames.INDEX, 2)
 
       def block = foo.expandAst(NodeTypes.BLOCK)
       block.checkNodeCount(1)
@@ -4347,11 +4347,11 @@ class AstCreationPassTest extends AbstractPassTest {
 
         def paramA = foo.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "a")
         paramA.checkNodeCount(1)
-        paramA.checkProperty(PropertyNames.ORDER, 1)
+        paramA.checkProperty(PropertyNames.INDEX, 1)
 
         def paramB = foo.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "b")
         paramB.checkNodeCount(1)
-        paramB.checkProperty(PropertyNames.ORDER, 2)
+        paramB.checkProperty(PropertyNames.INDEX, 2)
 
         def block = foo.expandAst(NodeTypes.BLOCK)
         block.checkNodeCount(1)
@@ -4393,15 +4393,15 @@ class AstCreationPassTest extends AbstractPassTest {
 
       def paramA = foo.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "a")
       paramA.checkNodeCount(1)
-      paramA.checkProperty(PropertyNames.ORDER, 1)
+      paramA.checkProperty(PropertyNames.INDEX, 1)
 
       def paramB = foo.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "b")
       paramB.checkNodeCount(1)
-      paramB.checkProperty(PropertyNames.ORDER, 2)
+      paramB.checkProperty(PropertyNames.INDEX, 2)
 
       def paramC = foo.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "c")
       paramC.checkNodeCount(1)
-      paramC.checkProperty(PropertyNames.ORDER, 3)
+      paramC.checkProperty(PropertyNames.INDEX, 3)
 
       def block = foo.expandAst(NodeTypes.BLOCK)
       block.checkNodeCount(1)

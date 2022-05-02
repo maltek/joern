@@ -233,7 +233,7 @@ trait AstForDeclarationsCreator {
     assignmentCallId
   }
 
-  private def convertDestructingObjectElementWithDefault(
+  protected def convertDestructingObjectElementWithDefault(
     element: BabelNodeInfo,
     key: String,
     localTmpName: String
@@ -312,6 +312,8 @@ trait AstForDeclarationsCreator {
       )
 
     val subTreeAsts = pattern match {
+      case ident @ BabelNodeInfo(BabelAst.Identifier) =>
+        List(convertDestructingObjectElement(ident, ident.code, localTmpName))
       case BabelNodeInfo(BabelAst.ObjectPattern) =>
         pattern.json("properties").arr.toList.map { element =>
           createBabelNodeInfo(element) match {
