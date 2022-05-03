@@ -67,7 +67,7 @@ class ExpressionMethods(val node: Expression) extends AnyVal with NodeExtension 
       call          <- node._argumentIn.asScala
       calledMethods <- callResolver.getCalledMethods(call.asInstanceOf[CallRepr])
       paramIn       <- calledMethods._astOut.asScala.collect { case node: MethodParameterIn => node }
-      if paramIn.index == node.argumentIndex
+      if paramIn.index == node.argumentIndex || (paramIn.isVariadic && node.argumentIndex > paramIn.index)
     } yield paramIn
 
   def typ: Traversal[Type] = {

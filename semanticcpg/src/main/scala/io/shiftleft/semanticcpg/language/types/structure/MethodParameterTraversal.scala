@@ -34,7 +34,7 @@ class MethodParameterTraversal(val traversal: Traversal[MethodParameterIn]) exte
       paramIn <- traversal
       call    <- callResolver.getMethodCallsites(paramIn.method)
       arg     <- call._argumentOut.asScala.collect { case node: Expression with HasArgumentIndex => node }
-      if arg.argumentIndex == paramIn.index
+      if arg.argumentIndex == paramIn.index || (paramIn.isVariadic && arg.argumentIndex > paramIn.index)
     } yield arg
 
 }
