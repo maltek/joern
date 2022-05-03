@@ -29,8 +29,8 @@ trait AstForFunctionsCreator {
     createBabelNodeInfo(param) match {
       case rest @ BabelNodeInfo(BabelAst.RestElement) =>
         val paramName = rest.code.replace("...", "")
-        val localId   = createLocalNode(paramName, Defines.ANY.label)
-        diffGraph.addEdge(localAstParentStack.head, localId, EdgeTypes.AST)
+        val localNode = createLocalNode(paramName, Defines.ANY.label)
+        diffGraph.addEdge(localAstParentStack.head, localNode, EdgeTypes.AST)
         createParameterInNode(paramName, rest.code, index, isVariadic = true, rest.lineNumber, rest.columnNumber)
       case assignmentPattern @ BabelNodeInfo(BabelAst.AssignmentPattern) =>
         val lhsElement = assignmentPattern.json("left")
@@ -89,16 +89,16 @@ trait AstForFunctionsCreator {
           case element if !element.isNull =>
             createBabelNodeInfo(element) match {
               case ident @ BabelNodeInfo(BabelAst.Identifier) =>
-                val paramName    = code(ident.json)
-                val localParamId = createIdentifierNode(paramName, ident)
-                val paramId      = createIdentifierNode(name, ident)
-                val keyId        = createFieldIdentifierNode(paramName, ident.lineNumber, ident.columnNumber)
-                val accessId     = createFieldAccessCallAst(paramId, keyId, ident.lineNumber, ident.columnNumber)
-                Ast.storeInDiffGraph(accessId, diffGraph)
+                val paramName      = code(ident.json)
+                val localParamNode = createIdentifierNode(paramName, ident)
+                val paramNode      = createIdentifierNode(name, ident)
+                val keyNode        = createFieldIdentifierNode(paramName, ident.lineNumber, ident.columnNumber)
+                val accessAst      = createFieldAccessCallAst(paramNode, keyNode, ident.lineNumber, ident.columnNumber)
+                Ast.storeInDiffGraph(accessAst, diffGraph)
                 createAssignmentCallAst(
-                  localParamId,
-                  accessId.nodes.head,
-                  s"$paramName = ${codeOf(accessId.nodes.head)}",
+                  localParamNode,
+                  accessAst.nodes.head,
+                  s"$paramName = ${codeOf(accessAst.nodes.head)}",
                   ident.lineNumber,
                   ident.columnNumber
                 )
@@ -120,16 +120,16 @@ trait AstForFunctionsCreator {
         additionalBlockStatements.addAll(objPattern.json("properties").arr.toList.map { element =>
           createBabelNodeInfo(element) match {
             case prop @ BabelNodeInfo(BabelAst.ObjectProperty) =>
-              val paramName    = code(prop.json("key"))
-              val localParamId = createIdentifierNode(paramName, prop)
-              val paramId      = createIdentifierNode(name, prop)
-              val keyId        = createFieldIdentifierNode(paramName, prop.lineNumber, prop.columnNumber)
-              val accessId     = createFieldAccessCallAst(paramId, keyId, prop.lineNumber, prop.columnNumber)
-              Ast.storeInDiffGraph(accessId, diffGraph)
+              val paramName      = code(prop.json("key"))
+              val localParamNode = createIdentifierNode(paramName, prop)
+              val paramNode      = createIdentifierNode(name, prop)
+              val keyNode        = createFieldIdentifierNode(paramName, prop.lineNumber, prop.columnNumber)
+              val accessAst      = createFieldAccessCallAst(paramNode, keyNode, prop.lineNumber, prop.columnNumber)
+              Ast.storeInDiffGraph(accessAst, diffGraph)
               createAssignmentCallAst(
-                localParamId,
-                accessId.nodes.head,
-                s"$paramName = ${codeOf(accessId.nodes.head)}",
+                localParamNode,
+                accessAst.nodes.head,
+                s"$paramName = ${codeOf(accessAst.nodes.head)}",
                 prop.lineNumber,
                 prop.columnNumber
               )
@@ -146,39 +146,36 @@ trait AstForFunctionsCreator {
     val lhsElement = element.json("left")
     val rhsElement = element.json("right")
 
-    val rhsId = astForNodeWithFunctionReference(rhsElement)
-    Ast.storeInDiffGraph(rhsId, diffGraph)
+    val rhsAst = astForNodeWithFunctionReference(rhsElement)
+    Ast.storeInDiffGraph(rhsAst, diffGraph)
 
-    val lhsId = astForNode(lhsElement)
-    Ast.storeInDiffGraph(lhsId, diffGraph)
+    val lhsAst = astForNode(lhsElement)
+    Ast.storeInDiffGraph(lhsAst, diffGraph)
 
-    val testId = {
-      val keyId = createIdentifierNode(codeOf(lhsId.nodes.head), element)
-      val voidCallId = createCallNode(
+    val testAst = {
+      val keyNode = createIdentifierNode(codeOf(lhsAst.nodes.head), element)
+      val voidCallNode = createCallNode(
         "void 0",
         "<operator>.void",
         DispatchTypes.STATIC_DISPATCH,
         element.lineNumber,
         element.columnNumber
       )
-      val equalsCallId =
-        createEqualsCallAst(keyId, voidCallId, element.lineNumber, element.columnNumber)
-      equalsCallId
+      val equalsCallAst = createEqualsCallAst(keyNode, voidCallNode, element.lineNumber, element.columnNumber)
+      equalsCallAst
     }
-    Ast.storeInDiffGraph(testId, diffGraph)
-    val falseId = createIdentifierNode(codeOf(lhsId.nodes.head), element)
-    val ternaryNodeId =
-      createTernaryCallAst(testId.nodes.head, rhsId.nodes.head, falseId, element.lineNumber, element.columnNumber)
-    Ast.storeInDiffGraph(ternaryNodeId, diffGraph)
-    val assignmentCallId =
-      createAssignmentCallAst(
-        lhsId.nodes.head,
-        ternaryNodeId.nodes.head,
-        s"${codeOf(lhsId.nodes.head)} = ${codeOf(ternaryNodeId.nodes.head)}",
-        element.lineNumber,
-        element.columnNumber
-      )
-    assignmentCallId
+    Ast.storeInDiffGraph(testAst, diffGraph)
+    val falseNode = createIdentifierNode(codeOf(lhsAst.nodes.head), element)
+    val ternaryNodeAst =
+      createTernaryCallAst(testAst.nodes.head, rhsAst.nodes.head, falseNode, element.lineNumber, element.columnNumber)
+    Ast.storeInDiffGraph(ternaryNodeAst, diffGraph)
+    createAssignmentCallAst(
+      lhsAst.nodes.head,
+      ternaryNodeAst.nodes.head,
+      s"${codeOf(lhsAst.nodes.head)} = ${codeOf(ternaryNodeAst.nodes.head)}",
+      element.lineNumber,
+      element.columnNumber
+    )
   }
 
   protected def createMethodAstAndNode(

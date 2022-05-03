@@ -156,9 +156,9 @@ trait AstForStatementsCreator {
 
     val switchExpressionAst = astForNode(switchStmt.json("discriminant"))
 
-    val blockId = createBlockNode(switchNode.code, switchStmt.lineNumber, switchNode.columnNumber)
-    scope.pushNewBlockScope(blockId)
-    localAstParentStack.push(blockId)
+    val blockNode = createBlockNode(switchNode.code, switchStmt.lineNumber, switchNode.columnNumber)
+    scope.pushNewBlockScope(blockNode)
+    localAstParentStack.push(blockNode)
 
     val casesAsts = switchStmt.json("cases").arr.flatMap(c => astsForSwitchCase(createBabelNodeInfo(c)))
     setIndices(casesAsts.toList)
@@ -166,11 +166,11 @@ trait AstForStatementsCreator {
     scope.popScope()
     localAstParentStack.pop()
 
-    setIndices(List(switchExpressionAst, Ast(blockId)))
+    setIndices(List(switchExpressionAst, Ast(blockNode)))
     Ast(switchNode)
       .withChild(switchExpressionAst)
       .withConditionEdge(switchNode, switchExpressionAst.nodes.head)
-      .withChild(Ast(blockId).withChildren(casesAsts))
+      .withChild(Ast(blockNode).withChildren(casesAsts))
   }
 
   /** De-sugaring from:

@@ -441,57 +441,56 @@ trait AstForExpressionsCreator {
   }
 
   protected def astForObjectExpression(objExpr: BabelNodeInfo): Ast = {
-    val blockId = createBlockNode(objExpr.code, objExpr.lineNumber, objExpr.columnNumber)
+    val blockNode = createBlockNode(objExpr.code, objExpr.lineNumber, objExpr.columnNumber)
 
-    scope.pushNewBlockScope(blockId)
-    localAstParentStack.push(blockId)
+    scope.pushNewBlockScope(blockNode)
+    localAstParentStack.push(blockNode)
 
-    val tmpName = generateUnusedVariableName(usedVariableNames, Set.empty, "_tmp")
-    val localId = createLocalNode(tmpName, Defines.ANY.label)
-    diffGraph.addEdge(localAstParentStack.head, localId, EdgeTypes.AST)
+    val tmpName   = generateUnusedVariableName(usedVariableNames, Set.empty, "_tmp")
+    val localNode = createLocalNode(tmpName, Defines.ANY.label)
+    diffGraph.addEdge(localAstParentStack.head, localNode, EdgeTypes.AST)
 
     val propertiesAsts = objExpr.json("properties").arr.toList.map { property =>
       val propertyInfo = createBabelNodeInfo(property)
-      val (lhsId, rhsId) = propertyInfo match {
+      val (lhsNode, rhsAst) = propertyInfo match {
         case objMethod @ BabelNodeInfo(BabelAst.ObjectMethod) =>
           val keyName = objMethod.json("key")("name").str
-          val keyId   = createFieldIdentifierNode(keyName, objMethod.lineNumber, objMethod.columnNumber)
-          (keyId, astForFunctionDeclaration(objMethod, shouldCreateFunctionReference = true))
+          val keyNode = createFieldIdentifierNode(keyName, objMethod.lineNumber, objMethod.columnNumber)
+          (keyNode, astForFunctionDeclaration(objMethod, shouldCreateFunctionReference = true))
         case objProperty @ BabelNodeInfo(BabelAst.ObjectProperty) =>
           val keyName = code(objProperty.json("key"))
-          val keyId   = createFieldIdentifierNode(keyName, objProperty.lineNumber, objProperty.columnNumber)
+          val keyNode = createFieldIdentifierNode(keyName, objProperty.lineNumber, objProperty.columnNumber)
           val ast     = astForNodeWithFunctionReference(objProperty.json("value"))
-          (keyId, ast)
+          (keyNode, ast)
         case spread @ BabelNodeInfo(BabelAst.SpreadElement) =>
           val keyName = code(spread.json("argument"))
-          val keyId   = createFieldIdentifierNode(keyName, spread.lineNumber, spread.columnNumber)
-          (keyId, astForNode(spread.json))
+          val keyNode = createFieldIdentifierNode(keyName, spread.lineNumber, spread.columnNumber)
+          (keyNode, astForNode(spread.json))
         case _ => ???
       }
 
-      val leftHandSideTmpId = createIdentifierNode(tmpName, propertyInfo)
-      val leftHandSideFieldAccessId =
-        createFieldAccessCallAst(leftHandSideTmpId, lhsId, propertyInfo.lineNumber, propertyInfo.columnNumber)
+      val leftHandSideTmpNode = createIdentifierNode(tmpName, propertyInfo)
+      val leftHandSideFieldAccessAst =
+        createFieldAccessCallAst(leftHandSideTmpNode, lhsNode, propertyInfo.lineNumber, propertyInfo.columnNumber)
 
-      Ast.storeInDiffGraph(leftHandSideFieldAccessId, diffGraph)
-      Ast.storeInDiffGraph(rhsId, diffGraph)
+      Ast.storeInDiffGraph(leftHandSideFieldAccessAst, diffGraph)
+      Ast.storeInDiffGraph(rhsAst, diffGraph)
 
-      val assignmentCallId = createAssignmentCallAst(
-        leftHandSideFieldAccessId.nodes.head,
-        rhsId.nodes.head,
-        s"$tmpName.${lhsId.canonicalName} = ${codeOf(rhsId.nodes.head)}",
+      createAssignmentCallAst(
+        leftHandSideFieldAccessAst.nodes.head,
+        rhsAst.nodes.head,
+        s"$tmpName.${lhsNode.canonicalName} = ${codeOf(rhsAst.nodes.head)}",
         propertyInfo.lineNumber,
         propertyInfo.columnNumber
       )
-      assignmentCallId
     }
 
-    val tmpId = createIdentifierNode(tmpName, objExpr)
+    val tmpNode = createIdentifierNode(tmpName, objExpr)
 
     scope.popScope()
     localAstParentStack.pop()
 
     setIndices(propertiesAsts)
-    Ast(blockId).withChildren(propertiesAsts).withChild(Ast(tmpId))
+    Ast(blockNode).withChildren(propertiesAsts).withChild(Ast(tmpNode))
   }
 }

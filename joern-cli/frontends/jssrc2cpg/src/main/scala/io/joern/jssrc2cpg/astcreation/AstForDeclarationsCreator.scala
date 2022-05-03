@@ -143,32 +143,33 @@ trait AstForDeclarationsCreator {
   }
 
   private def convertDestructingObjectElement(element: BabelNodeInfo, key: String, localTmpName: String): Ast = {
-    val valueId = astForNode(element.json)
-    Ast.storeInDiffGraph(valueId, diffGraph)
-    val fieldAccessTmpId = createIdentifierNode(localTmpName, element)
-    val keyId            = createFieldIdentifierNode(key)
-    val accessId         = createFieldAccessCallAst(fieldAccessTmpId, keyId, element.lineNumber, element.columnNumber)
-    Ast.storeInDiffGraph(accessId, diffGraph)
+    val valueAst = astForNode(element.json)
+    Ast.storeInDiffGraph(valueAst, diffGraph)
+    val fieldAccessTmpNode = createIdentifierNode(localTmpName, element)
+    val keyNode            = createFieldIdentifierNode(key)
+    val accessAst = createFieldAccessCallAst(fieldAccessTmpNode, keyNode, element.lineNumber, element.columnNumber)
+    Ast.storeInDiffGraph(accessAst, diffGraph)
     createAssignmentCallAst(
-      valueId.nodes.head,
-      accessId.nodes.head,
-      s"${codeOf(valueId.nodes.head)} = ${codeOf(accessId.nodes.head)}",
+      valueAst.nodes.head,
+      accessAst.nodes.head,
+      s"${codeOf(valueAst.nodes.head)} = ${codeOf(accessAst.nodes.head)}",
       element.lineNumber,
       element.columnNumber
     )
   }
 
   private def convertDestructingArrayElement(element: BabelNodeInfo, index: Int, localTmpName: String): Ast = {
-    val valueId = astForNode(element.json)
-    Ast.storeInDiffGraph(valueId, diffGraph)
-    val fieldAccessTmpId = createIdentifierNode(localTmpName, element)
-    val keyId = createLiteralNode(index.toString, Some(Defines.NUMBER.label), element.lineNumber, element.columnNumber)
-    val accessId = createIndexAccessCallAst(fieldAccessTmpId, keyId, element.lineNumber, element.columnNumber)
-    Ast.storeInDiffGraph(accessId, diffGraph)
+    val valueAst = astForNode(element.json)
+    Ast.storeInDiffGraph(valueAst, diffGraph)
+    val fieldAccessTmpNode = createIdentifierNode(localTmpName, element)
+    val keyNode =
+      createLiteralNode(index.toString, Some(Defines.NUMBER.label), element.lineNumber, element.columnNumber)
+    val accessAst = createIndexAccessCallAst(fieldAccessTmpNode, keyNode, element.lineNumber, element.columnNumber)
+    Ast.storeInDiffGraph(accessAst, diffGraph)
     createAssignmentCallAst(
-      valueId.nodes.head,
-      accessId.nodes.head,
-      s"${codeOf(valueId.nodes.head)} = ${codeOf(accessId.nodes.head)}",
+      valueAst.nodes.head,
+      accessAst.nodes.head,
+      s"${codeOf(valueAst.nodes.head)} = ${codeOf(accessAst.nodes.head)}",
       element.lineNumber,
       element.columnNumber
     )
@@ -181,56 +182,50 @@ trait AstForDeclarationsCreator {
   ): Ast = {
     val lhsElement = element.json("left")
     val rhsElement = element.json("right")
-    val lhsId      = astForNode(lhsElement)
-    Ast.storeInDiffGraph(lhsId, diffGraph)
-    val rhsId = astForNodeWithFunctionReference(rhsElement)
-    Ast.storeInDiffGraph(rhsId, diffGraph)
-    val testId = {
-      val fieldAccessTmpId = createIdentifierNode(localTmpName, element)
-      val keyId =
+    val lhsAst     = astForNode(lhsElement)
+    Ast.storeInDiffGraph(lhsAst, diffGraph)
+    val rhsAst = astForNodeWithFunctionReference(rhsElement)
+    Ast.storeInDiffGraph(rhsAst, diffGraph)
+    val testAst = {
+      val fieldAccessTmpNode = createIdentifierNode(localTmpName, element)
+      val keyNode =
         createLiteralNode(index.toString, Some(Defines.NUMBER.label), element.lineNumber, element.columnNumber)
-      val accessId =
-        createIndexAccessCallAst(fieldAccessTmpId, keyId, element.lineNumber, element.columnNumber)
-      Ast.storeInDiffGraph(accessId, diffGraph)
-      val voidCallId = createCallNode(
+      val accessAst =
+        createIndexAccessCallAst(fieldAccessTmpNode, keyNode, element.lineNumber, element.columnNumber)
+      Ast.storeInDiffGraph(accessAst, diffGraph)
+      val voidCallNode = createCallNode(
         "void 0",
         "<operator>.void",
         DispatchTypes.STATIC_DISPATCH,
         element.lineNumber,
         element.columnNumber
       )
-      val equalsCallId =
-        createEqualsCallAst(accessId.nodes.head, voidCallId, element.lineNumber, element.columnNumber)
-      equalsCallId
+      createEqualsCallAst(accessAst.nodes.head, voidCallNode, element.lineNumber, element.columnNumber)
     }
-    Ast.storeInDiffGraph(testId, diffGraph)
-    val falseId = {
-      val fieldAccessTmpId = createIdentifierNode(localTmpName, element)
-      val keyId =
+    Ast.storeInDiffGraph(testAst, diffGraph)
+    val falseAst = {
+      val fieldAccessTmpNode = createIdentifierNode(localTmpName, element)
+      val keyNode =
         createLiteralNode(index.toString, Some(Defines.NUMBER.label), element.lineNumber, element.columnNumber)
-      val accessId =
-        createIndexAccessCallAst(fieldAccessTmpId, keyId, element.lineNumber, element.columnNumber)
-      accessId
+      createIndexAccessCallAst(fieldAccessTmpNode, keyNode, element.lineNumber, element.columnNumber)
     }
-    Ast.storeInDiffGraph(falseId, diffGraph)
-    val ternaryNodeId =
+    Ast.storeInDiffGraph(falseAst, diffGraph)
+    val ternaryNodeAst =
       createTernaryCallAst(
-        testId.nodes.head,
-        rhsId.nodes.head,
-        falseId.nodes.head,
+        testAst.nodes.head,
+        rhsAst.nodes.head,
+        falseAst.nodes.head,
         element.lineNumber,
         element.columnNumber
       )
-    Ast.storeInDiffGraph(ternaryNodeId, diffGraph)
-    val assignmentCallId =
-      createAssignmentCallAst(
-        lhsId.nodes.head,
-        ternaryNodeId.nodes.head,
-        s"${codeOf(lhsId.nodes.head)} = ${codeOf(ternaryNodeId.nodes.head)}",
-        element.lineNumber,
-        element.columnNumber
-      )
-    assignmentCallId
+    Ast.storeInDiffGraph(ternaryNodeAst, diffGraph)
+    createAssignmentCallAst(
+      lhsAst.nodes.head,
+      ternaryNodeAst.nodes.head,
+      s"${codeOf(lhsAst.nodes.head)} = ${codeOf(ternaryNodeAst.nodes.head)}",
+      element.lineNumber,
+      element.columnNumber
+    )
   }
 
   protected def convertDestructingObjectElementWithDefault(
@@ -240,95 +235,89 @@ trait AstForDeclarationsCreator {
   ): Ast = {
     val lhsElement = element.json("left")
     val rhsElement = element.json("right")
-    val lhsId      = astForNode(lhsElement)
-    Ast.storeInDiffGraph(lhsId, diffGraph)
-    val rhsId = astForNodeWithFunctionReference(rhsElement)
-    Ast.storeInDiffGraph(rhsId, diffGraph)
-    val testId = {
-      val fieldAccessTmpId = createIdentifierNode(localTmpName, element)
-      val keyId            = createFieldIdentifierNode(key)
-      val accessId =
-        createFieldAccessCallAst(fieldAccessTmpId, keyId, element.lineNumber, element.columnNumber)
-      Ast.storeInDiffGraph(accessId, diffGraph)
-      val voidCallId = createCallNode(
+    val lhsAst     = astForNode(lhsElement)
+    Ast.storeInDiffGraph(lhsAst, diffGraph)
+    val rhsAst = astForNodeWithFunctionReference(rhsElement)
+    Ast.storeInDiffGraph(rhsAst, diffGraph)
+    val testAst = {
+      val fieldAccessTmpNode = createIdentifierNode(localTmpName, element)
+      val keyNode            = createFieldIdentifierNode(key)
+      val accessAst =
+        createFieldAccessCallAst(fieldAccessTmpNode, keyNode, element.lineNumber, element.columnNumber)
+      Ast.storeInDiffGraph(accessAst, diffGraph)
+      val voidCallNode = createCallNode(
         "void 0",
         "<operator>.void",
         DispatchTypes.STATIC_DISPATCH,
         element.lineNumber,
         element.columnNumber
       )
-      val equalsCallId =
-        createEqualsCallAst(accessId.nodes.head, voidCallId, element.lineNumber, element.columnNumber)
-      equalsCallId
+      createEqualsCallAst(accessAst.nodes.head, voidCallNode, element.lineNumber, element.columnNumber)
     }
-    Ast.storeInDiffGraph(testId, diffGraph)
-    val falseId = {
-      val fieldAccessTmpId = createIdentifierNode(localTmpName, element)
-      val keyId            = createFieldIdentifierNode(key)
-      val accessId =
-        createFieldAccessCallAst(fieldAccessTmpId, keyId, element.lineNumber, element.columnNumber)
-      accessId
+    Ast.storeInDiffGraph(testAst, diffGraph)
+    val falseAst = {
+      val fieldAccessTmpNode = createIdentifierNode(localTmpName, element)
+      val keyNode            = createFieldIdentifierNode(key)
+      createFieldAccessCallAst(fieldAccessTmpNode, keyNode, element.lineNumber, element.columnNumber)
     }
-    Ast.storeInDiffGraph(falseId, diffGraph)
-    val ternaryNodeId =
+    Ast.storeInDiffGraph(falseAst, diffGraph)
+    val ternaryNodeAst =
       createTernaryCallAst(
-        testId.nodes.head,
-        rhsId.nodes.head,
-        falseId.nodes.head,
+        testAst.nodes.head,
+        rhsAst.nodes.head,
+        falseAst.nodes.head,
         element.lineNumber,
         element.columnNumber
       )
-    Ast.storeInDiffGraph(ternaryNodeId, diffGraph)
-    val assignmentCallId =
-      createAssignmentCallAst(
-        lhsId.nodes.head,
-        ternaryNodeId.nodes.head,
-        s"${codeOf(lhsId.nodes.head)} = ${codeOf(ternaryNodeId.nodes.head)}",
-        element.lineNumber,
-        element.columnNumber
-      )
-    assignmentCallId
+    Ast.storeInDiffGraph(ternaryNodeAst, diffGraph)
+    createAssignmentCallAst(
+      lhsAst.nodes.head,
+      ternaryNodeAst.nodes.head,
+      s"${codeOf(lhsAst.nodes.head)} = ${codeOf(ternaryNodeAst.nodes.head)}",
+      element.lineNumber,
+      element.columnNumber
+    )
   }
 
   private def createParamAst(pattern: BabelNodeInfo, keyName: String, sourceAst: Ast): Ast = {
-    val testId = {
-      val lhsId = createIdentifierNode(keyName, pattern)
-      scope.addVariableReference(keyName, lhsId)
-      val rhsId = createCallNode(
+    val testAst = {
+      val lhsNode = createIdentifierNode(keyName, pattern)
+      scope.addVariableReference(keyName, lhsNode)
+      val rhsNode = createCallNode(
         "void 0",
         "<operator>.void",
         DispatchTypes.STATIC_DISPATCH,
         pattern.lineNumber,
         pattern.columnNumber
       )
-      createEqualsCallAst(lhsId, rhsId, pattern.lineNumber, pattern.columnNumber)
+      createEqualsCallAst(lhsNode, rhsNode, pattern.lineNumber, pattern.columnNumber)
     }
-    Ast.storeInDiffGraph(testId, diffGraph)
+    Ast.storeInDiffGraph(testAst, diffGraph)
 
-    val falseId = {
-      val initId = createIdentifierNode(keyName, pattern)
-      scope.addVariableReference(keyName, initId)
-      initId
+    val falseAst = {
+      val initNode = createIdentifierNode(keyName, pattern)
+      scope.addVariableReference(keyName, initNode)
+      initNode
     }
-    createTernaryCallAst(testId.nodes.head, sourceAst.nodes.head, falseId, pattern.lineNumber, pattern.columnNumber)
+    createTernaryCallAst(testAst.nodes.head, sourceAst.nodes.head, falseAst, pattern.lineNumber, pattern.columnNumber)
   }
 
   protected def astForDeconstruction(pattern: BabelNodeInfo, sourceAst: Ast, paramName: Option[String] = None): Ast = {
     val localTmpName = generateUnusedVariableName(usedVariableNames, Set.empty, "_tmp")
 
-    val blockId = createBlockNode(pattern.code, pattern.lineNumber, pattern.columnNumber)
-    scope.pushNewBlockScope(blockId)
-    localAstParentStack.push(blockId)
+    val blockNode = createBlockNode(pattern.code, pattern.lineNumber, pattern.columnNumber)
+    scope.pushNewBlockScope(blockNode)
+    localAstParentStack.push(blockNode)
 
-    val localId = createLocalNode(localTmpName, Defines.ANY.label)
-    diffGraph.addEdge(localAstParentStack.head, localId, EdgeTypes.AST)
+    val localNode = createLocalNode(localTmpName, Defines.ANY.label)
+    diffGraph.addEdge(localAstParentStack.head, localNode, EdgeTypes.AST)
 
-    val tmpId = createIdentifierNode(localTmpName, pattern)
+    val tmpNode = createIdentifierNode(localTmpName, pattern)
 
     val rhsAssignmentAst = paramName.map(createParamAst(pattern, _, sourceAst)).getOrElse(sourceAst)
-    val assignmentTmpCallId =
+    val assignmentTmpCallAst =
       createAssignmentCallAst(
-        tmpId,
+        tmpNode,
         rhsAssignmentAst.nodes.head,
         s"$localTmpName = ${codeOf(rhsAssignmentAst.nodes.head)}",
         pattern.lineNumber,
@@ -366,13 +355,13 @@ trait AstForDeclarationsCreator {
         }
     }
 
-    val returnTmpId = createIdentifierNode(localTmpName, pattern)
+    val returnTmpNode = createIdentifierNode(localTmpName, pattern)
     scope.popScope()
     localAstParentStack.pop()
 
-    val blockChildren = assignmentTmpCallId +: subTreeAsts :+ Ast(returnTmpId)
+    val blockChildren = assignmentTmpCallAst +: subTreeAsts :+ Ast(returnTmpNode)
     setIndices(blockChildren)
-    Ast(blockId).withChildren(blockChildren)
+    Ast(blockNode).withChildren(blockChildren)
   }
 
 }
