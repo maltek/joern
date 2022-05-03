@@ -13,7 +13,6 @@ import io.shiftleft.codepropertygraph.generated.nodes.NewMethod
 import io.shiftleft.codepropertygraph.generated.nodes.NewMethodParameterIn
 import io.shiftleft.codepropertygraph.generated.nodes.NewModifier
 import io.shiftleft.codepropertygraph.generated.DispatchTypes
-import io.shiftleft.codepropertygraph.generated.nodes.MethodParameterIn.PropertyDefaults
 import ujson.Arr
 import ujson.Value
 
@@ -26,97 +25,135 @@ trait AstForFunctionsCreator {
   private def handleParameters(
     parameters: Seq[Value],
     additionalBlockStatements: mutable.ArrayBuffer[Ast]
-  ): Seq[Seq[NewMethodParameterIn]] = withIndex(parameters) { (param, index) =>
+  ): Seq[NewMethodParameterIn] = withIndex(parameters) { case (param, index) =>
     createBabelNodeInfo(param) match {
       case rest @ BabelNodeInfo(BabelAst.RestElement) =>
         val paramName = rest.code.replace("...", "")
         val localId   = createLocalNode(paramName, Defines.ANY.label)
         diffGraph.addEdge(localAstParentStack.head, localId, EdgeTypes.AST)
-        Seq(createParameterInNode(paramName, rest.code, index, isVariadic = true, rest.lineNumber, rest.columnNumber))
-      case obj @ BabelNodeInfo(BabelAst.ObjectPattern) =>
-        val objParams = withIndex(obj.json("properties").arr.toList) {
-          case (objParam, i) if !objParam.isNull =>
-            val objParamInfo = createBabelNodeInfo(objParam)
-            val paramName    = code(objParamInfo.json("key"))
-            val localId      = createLocalNode(paramName, Defines.ANY.label)
-            diffGraph.addEdge(localAstParentStack.head, localId, EdgeTypes.AST)
-            Some(
-              createParameterInNode(
-                paramName,
-                objParamInfo.code,
-                i,
-                isVariadic = false,
-                objParamInfo.lineNumber,
-                objParamInfo.columnNumber
-              )
-            )
-        }
-        objParams.flatten
-      case arr @ BabelNodeInfo(BabelAst.ArrayPattern) =>
-        val arrParams = withIndex(arr.json("elements").arr.toList) {
-          case (arrParam, i) if !arrParam.isNull =>
-            val arrParamInfo = createBabelNodeInfo(arrParam)
-            val paramName    = arrParamInfo.code
-            val localId      = createLocalNode(paramName, Defines.ANY.label)
-            diffGraph.addEdge(localAstParentStack.head, localId, EdgeTypes.AST)
-            Some(
-              createParameterInNode(
-                paramName,
-                arrParamInfo.code,
-                i,
-                isVariadic = false,
-                arrParamInfo.lineNumber,
-                arrParamInfo.columnNumber
-              )
-            )
-          case _ => None
-        }
-        arrParams.flatten
+        createParameterInNode(paramName, rest.code, index, isVariadic = true, rest.lineNumber, rest.columnNumber)
       case assignmentPattern @ BabelNodeInfo(BabelAst.AssignmentPattern) =>
-        val subTreeAst = createBabelNodeInfo(assignmentPattern.json("left")) match {
+        val lhsElement = assignmentPattern.json("left")
+        val rhsElement = assignmentPattern.json("right")
+        createBabelNodeInfo(lhsElement) match {
           case objPattern @ BabelNodeInfo(BabelAst.ObjectPattern) =>
-            val rhsAst = astForNodeWithFunctionReference(assignmentPattern.json("right"))
-            astForDeconstruction(objPattern, rhsAst)
+            val name = generateUnusedVariableName(usedVariableNames, Set.empty, s"param$index")
+            val param = createParameterInNode(
+              name,
+              assignmentPattern.code,
+              index,
+              isVariadic = false,
+              assignmentPattern.lineNumber,
+              assignmentPattern.columnNumber
+            )
+            additionalBlockStatements.addOne(
+              astForDeconstruction(objPattern, astForNodeWithFunctionReference(rhsElement), Some(name))
+            )
+            param
           case arrPattern @ BabelNodeInfo(BabelAst.ArrayPattern) =>
-            val rhsAst = astForNodeWithFunctionReference(assignmentPattern.json("right"))
-            astForDeconstruction(arrPattern, rhsAst)
-          case _ =>
-            val key     = code(assignmentPattern.json("left"))
-            val localId = createLocalNode(key, Defines.ANY.label)
-            diffGraph.addEdge(localAstParentStack.head, localId, EdgeTypes.AST)
-            convertDestructingParamWithDefault(assignmentPattern, key)
+            val name = generateUnusedVariableName(usedVariableNames, Set.empty, s"param$index")
+            val param = createParameterInNode(
+              name,
+              assignmentPattern.code,
+              index,
+              isVariadic = false,
+              assignmentPattern.lineNumber,
+              assignmentPattern.columnNumber
+            )
+            additionalBlockStatements.addOne(
+              astForDeconstruction(arrPattern, astForNodeWithFunctionReference(rhsElement), Some(name))
+            )
+            param
+          case other =>
+            additionalBlockStatements.addOne(convertParamWithDefault(assignmentPattern))
+            createParameterInNode(
+              other.code,
+              other.code,
+              index,
+              isVariadic = false,
+              other.lineNumber,
+              other.columnNumber
+            )
         }
-        val blockChildren = List(subTreeAst)
-        setIndices(blockChildren)
-        additionalBlockStatements.addAll(blockChildren)
-        val params = handleParameters(Seq(assignmentPattern.json("left")), additionalBlockStatements)
-        params.flatten.map {
-          case param if param.index == PropertyDefaults.Index => param.index(index)
-          case param                                          => param
-        }
-      case other =>
-        Seq(
-          createParameterInNode(other.code, other.code, index, isVariadic = false, other.lineNumber, other.columnNumber)
+      case arrPattern @ BabelNodeInfo(BabelAst.ArrayPattern) =>
+        val name = generateUnusedVariableName(usedVariableNames, Set.empty, s"param$index")
+        val param = createParameterInNode(
+          name,
+          arrPattern.code,
+          index,
+          isVariadic = false,
+          arrPattern.lineNumber,
+          arrPattern.columnNumber
         )
+        additionalBlockStatements.addAll(arrPattern.json("elements").arr.toList.map {
+          case element if !element.isNull =>
+            createBabelNodeInfo(element) match {
+              case ident @ BabelNodeInfo(BabelAst.Identifier) =>
+                val paramName    = code(ident.json)
+                val localParamId = createIdentifierNode(paramName, ident)
+                val paramId      = createIdentifierNode(name, ident)
+                val keyId        = createFieldIdentifierNode(paramName, ident.lineNumber, ident.columnNumber)
+                val accessId     = createFieldAccessCallAst(paramId, keyId, ident.lineNumber, ident.columnNumber)
+                Ast.storeInDiffGraph(accessId, diffGraph)
+                createAssignmentCallAst(
+                  localParamId,
+                  accessId.nodes.head,
+                  s"$paramName = ${codeOf(accessId.nodes.head)}",
+                  ident.lineNumber,
+                  ident.columnNumber
+                )
+              case other => astForNode(other.json)
+            }
+          case _ => Ast()
+        })
+        param
+      case objPattern @ BabelNodeInfo(BabelAst.ObjectPattern) =>
+        val name = generateUnusedVariableName(usedVariableNames, Set.empty, s"param$index")
+        val param = createParameterInNode(
+          name,
+          objPattern.code,
+          index,
+          isVariadic = false,
+          objPattern.lineNumber,
+          objPattern.columnNumber
+        )
+        additionalBlockStatements.addAll(objPattern.json("properties").arr.toList.map { element =>
+          createBabelNodeInfo(element) match {
+            case prop @ BabelNodeInfo(BabelAst.ObjectProperty) =>
+              val paramName    = code(prop.json("key"))
+              val localParamId = createIdentifierNode(paramName, prop)
+              val paramId      = createIdentifierNode(name, prop)
+              val keyId        = createFieldIdentifierNode(paramName, prop.lineNumber, prop.columnNumber)
+              val accessId     = createFieldAccessCallAst(paramId, keyId, prop.lineNumber, prop.columnNumber)
+              Ast.storeInDiffGraph(accessId, diffGraph)
+              createAssignmentCallAst(
+                localParamId,
+                accessId.nodes.head,
+                s"$paramName = ${codeOf(accessId.nodes.head)}",
+                prop.lineNumber,
+                prop.columnNumber
+              )
+            case other => astForNode(other.json)
+          }
+        })
+        param
+      case other =>
+        createParameterInNode(other.code, other.code, index, isVariadic = false, other.lineNumber, other.columnNumber)
     }
   }
 
-  private def convertDestructingParamWithDefault(element: BabelNodeInfo, key: String): Ast = {
+  private def convertParamWithDefault(element: BabelNodeInfo): Ast = {
     val lhsElement = element.json("left")
     val rhsElement = element.json("right")
 
     val rhsId = astForNodeWithFunctionReference(rhsElement)
     Ast.storeInDiffGraph(rhsId, diffGraph)
 
-    val lhsId = createBabelNodeInfo(lhsElement) match {
-      case objPattern @ BabelNodeInfo(BabelAst.ObjectPattern) => astForDeconstruction(objPattern, rhsId)
-      case arrPattern @ BabelNodeInfo(BabelAst.ArrayPattern)  => astForDeconstruction(arrPattern, rhsId)
-      case _                                                  => astForNode(lhsElement)
-    }
+    val lhsId = astForNode(lhsElement)
     Ast.storeInDiffGraph(lhsId, diffGraph)
 
     val testId = {
-      val keyId = createIdentifierNode(key, element)
+      val keyId = createIdentifierNode(codeOf(lhsId.nodes.head), element)
       val voidCallId = createCallNode(
         "void 0",
         "<operator>.void",
@@ -129,7 +166,7 @@ trait AstForFunctionsCreator {
       equalsCallId
     }
     Ast.storeInDiffGraph(testId, diffGraph)
-    val falseId = createIdentifierNode(key, element)
+    val falseId = createIdentifierNode(codeOf(lhsId.nodes.head), element)
     val ternaryNodeId =
       createTernaryCallAst(testId.nodes.head, rhsId.nodes.head, falseId, element.lineNumber, element.columnNumber)
     Ast.storeInDiffGraph(ternaryNodeId, diffGraph)
@@ -222,7 +259,7 @@ trait AstForFunctionsCreator {
     val mAst =
       methodAst(
         methodNode,
-        thisNode +: paramNodes.flatten,
+        thisNode +: paramNodes,
         blockAst.withChildren(additionalBlockStatements ++ bodyStmtAsts),
         methodReturnNode
       )

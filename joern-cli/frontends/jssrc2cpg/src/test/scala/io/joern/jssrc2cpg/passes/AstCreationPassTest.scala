@@ -465,20 +465,31 @@ class AstCreationPassTest extends AbstractPassTest {
         def lambdaFullName = "code.js::program:anonymous"
         def lambda         = cpg.method.fullNameExact(lambdaFullName)
         lambda.checkNodeCount(1)
+
+        def lambdaBlock = lambda.expandAst(NodeTypes.BLOCK)
+        lambdaBlock.checkNodeCount(1)
+
         def parameters = lambda.expandAst(NodeTypes.METHOD_PARAMETER_IN)
         parameters.checkNodeCount(2)
 
         def param1 = parameters.filter(PropertyNames.INDEX, 0)
         param1.checkNodeCount(1)
-        param1.checkProperty(PropertyNames.ORDER, 1)
         param1.checkProperty(PropertyNames.NAME, "this")
         param1.checkProperty(PropertyNames.CODE, "this")
 
-        def param2 = parameters.filter(PropertyNames.INDEX, 2)
+        def param2 = parameters.filter(PropertyNames.INDEX, 1)
         param2.checkNodeCount(1)
-        param2.checkProperty(PropertyNames.ORDER, 2)
-        param2.checkProperty(PropertyNames.NAME, "param")
-        param2.checkProperty(PropertyNames.CODE, "param")
+        param2.checkProperty(PropertyNames.NAME, "param1_0")
+        param2.checkProperty(PropertyNames.CODE, "[, param]")
+
+        def param2Local = lambdaBlock.expandAst(NodeTypes.LOCAL).filter(PropertyNames.NAME, "param")
+        param2Local.checkNodeCount(1)
+
+        def assignmentToId =
+          lambdaBlock
+            .expandAst(NodeTypes.CALL)
+            .filter(PropertyNames.CODE, "param = param1_0.param")
+        assignmentToId.checkNodeCount(1)
     }
 
     "have two lambda functions in same scope level with different full names" in AstFixture("""
@@ -3187,9 +3198,9 @@ class AstCreationPassTest extends AbstractPassTest {
       fooMethod.checkNodeCount(1)
 
       def a =
-        fooMethod.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "a")
+        fooMethod.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "param1_0")
       a.checkNodeCount(1)
-      a.checkProperty(PropertyNames.CODE, "a")
+      a.checkProperty(PropertyNames.CODE, "{ a }")
       a.checkProperty(PropertyNames.INDEX, 1)
 
       def b = fooMethod.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "b")
@@ -3328,16 +3339,10 @@ class AstCreationPassTest extends AbstractPassTest {
       def userId = cpg.method.nameExact("userId")
       userId.checkNodeCount(1)
 
-      def param1 =
-        userId.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "id")
-      param1.checkNodeCount(1)
-      param1.checkProperty(PropertyNames.CODE, "id = {}")
-      param1.checkProperty(PropertyNames.INDEX, 1)
-      def param2 =
-        userId.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "b")
-      param2.checkNodeCount(1)
-      param2.checkProperty(PropertyNames.CODE, "b")
-      param2.checkProperty(PropertyNames.INDEX, 2)
+      def param =
+        userId.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "param1_0")
+      param.checkNodeCount(1)
+      param.checkProperty(PropertyNames.CODE, "{id = {}, b} = {}")
 
       def userIdBlock = userId.expandAst(NodeTypes.BLOCK)
       userIdBlock.checkNodeCount(1)
@@ -3352,7 +3357,7 @@ class AstCreationPassTest extends AbstractPassTest {
       def assignmentToTmp =
         destructionBlock
           .expandAst(NodeTypes.CALL)
-          .filter(PropertyNames.CODE, "_tmp_1 = {}")
+          .filter(PropertyNames.CODE, "_tmp_1 = param1_0 === void 0 ? {} : param1_0")
       assignmentToTmp.checkNodeCount(1)
 
       def assignmentToId =
@@ -3408,11 +3413,24 @@ class AstCreationPassTest extends AbstractPassTest {
       def idLocal = userIdBlock.expandAst(NodeTypes.LOCAL).filter(PropertyNames.NAME, "id")
       idLocal.checkNodeCount(1)
 
-      def param =
-        userId.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "id")
-      param.checkNodeCount(1)
-      param.checkProperty(PropertyNames.CODE, "id")
-      param.checkProperty(PropertyNames.INDEX, 1)
+      def assignmentToId =
+        userIdBlock.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "id = param1_0.id")
+      assignmentToId.checkNodeCount(1)
+      def id = assignmentToId.expandAst(NodeTypes.IDENTIFIER)
+      id.checkNodeCount(1)
+
+      def indexAccessId =
+        assignmentToId.expandAst(NodeTypes.CALL).filter(PropertyNames.CODE, "param1_0.id")
+      indexAccessId.checkNodeCount(1)
+
+      def leftId =
+        indexAccessId.expandAst(NodeTypes.IDENTIFIER).filter(PropertyNames.NAME, "param1_0")
+      leftId.checkNodeCount(1)
+      def rightId =
+        indexAccessId
+          .expandAst(NodeTypes.FIELD_IDENTIFIER)
+          .filter(PropertyNames.CANONICAL_NAME, "id")
+      rightId.checkNodeCount(1)
     }
 
     "have correct structure for array destruction assignment with declaration" in AstFixture("var [a, b] = x") { cpg =>
@@ -3711,7 +3729,7 @@ class AstCreationPassTest extends AbstractPassTest {
     "have correct structure for array destruction assignment with rest" ignore AstFixture("var [a, ...rest] = x") { _ =>
     }
 
-    "have correct structure for array destruction assignment as parameter" in AstFixture("""
+    "have correct structure for array destruction as parameter" in AstFixture("""
        |function userId([id]) {
        |  return id
        |}
@@ -3719,17 +3737,21 @@ class AstCreationPassTest extends AbstractPassTest {
       def userId = cpg.method.nameExact("userId")
       userId.checkNodeCount(1)
 
+      def param =
+        userId.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "param1_0")
+      param.checkNodeCount(1)
+
       def userIdBlock = userId.expandAst(NodeTypes.BLOCK)
       userIdBlock.checkNodeCount(1)
 
       def idLocal = userIdBlock.expandAst(NodeTypes.LOCAL).filter(PropertyNames.NAME, "id")
       idLocal.checkNodeCount(1)
 
-      def param =
-        userId.expandAst(NodeTypes.METHOD_PARAMETER_IN).filter(PropertyNames.NAME, "id")
-      param.checkNodeCount(1)
-      param.checkProperty(PropertyNames.CODE, "id")
-      param.checkProperty(PropertyNames.INDEX, 1)
+      def assignmentToId =
+        userIdBlock
+          .expandAst(NodeTypes.CALL)
+          .filter(PropertyNames.CODE, "id = param1_0.id")
+      assignmentToId.checkNodeCount(1)
     }
 
     "have correct structure for method spread argument" ignore AstFixture("foo(...args)") { _ => }

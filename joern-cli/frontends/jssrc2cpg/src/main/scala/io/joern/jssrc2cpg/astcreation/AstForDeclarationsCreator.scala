@@ -290,7 +290,30 @@ trait AstForDeclarationsCreator {
     assignmentCallId
   }
 
-  protected def astForDeconstruction(pattern: BabelNodeInfo, sourceAst: Ast): Ast = {
+  private def createParamAst(pattern: BabelNodeInfo, keyName: String, sourceAst: Ast): Ast = {
+    val testId = {
+      val lhsId = createIdentifierNode(keyName, pattern)
+      scope.addVariableReference(keyName, lhsId)
+      val rhsId = createCallNode(
+        "void 0",
+        "<operator>.void",
+        DispatchTypes.STATIC_DISPATCH,
+        pattern.lineNumber,
+        pattern.columnNumber
+      )
+      createEqualsCallAst(lhsId, rhsId, pattern.lineNumber, pattern.columnNumber)
+    }
+    Ast.storeInDiffGraph(testId, diffGraph)
+
+    val falseId = {
+      val initId = createIdentifierNode(keyName, pattern)
+      scope.addVariableReference(keyName, initId)
+      initId
+    }
+    createTernaryCallAst(testId.nodes.head, sourceAst.nodes.head, falseId, pattern.lineNumber, pattern.columnNumber)
+  }
+
+  protected def astForDeconstruction(pattern: BabelNodeInfo, sourceAst: Ast, paramName: Option[String] = None): Ast = {
     val localTmpName = generateUnusedVariableName(usedVariableNames, Set.empty, "_tmp")
 
     val blockId = createBlockNode(pattern.code, pattern.lineNumber, pattern.columnNumber)
@@ -302,11 +325,12 @@ trait AstForDeclarationsCreator {
 
     val tmpId = createIdentifierNode(localTmpName, pattern)
 
+    val rhsAssignmentAst = paramName.map(createParamAst(pattern, _, sourceAst)).getOrElse(sourceAst)
     val assignmentTmpCallId =
       createAssignmentCallAst(
         tmpId,
-        sourceAst.nodes.head,
-        s"$localTmpName = ${codeOf(sourceAst.nodes.head)}",
+        rhsAssignmentAst.nodes.head,
+        s"$localTmpName = ${codeOf(rhsAssignmentAst.nodes.head)}",
         pattern.lineNumber,
         pattern.columnNumber
       )
